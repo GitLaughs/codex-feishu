@@ -7,6 +7,14 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-23
+
+### Added
+
+- Codex API balance rotation script for cc-switch opentoken providers.
+- Optional Linux installer flags to register a systemd user timer for Codex API balance rotation.
+- Documentation for the rotation behavior and its non-retry boundary.
+
 ## [0.2.0] - 2026-05-23
 
 ### Added

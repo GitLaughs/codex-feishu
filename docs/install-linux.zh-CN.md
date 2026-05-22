@@ -7,6 +7,7 @@
 - 你想把 `cc-connect` 长期跑在 Linux 主机上。
 - 你希望用 systemd user service 后台运行。
 - 你仍然需要和 Windows 版相同的双机器人流程：mini 全量监听、deep 只处理 @、回复链隔离、`/help`、`/dream`、文件归档和健康检查。
+- 你可以选择接入 cc-switch 的 opentoken 余额轮询，让 Codex 新会话默认使用当前余额最高的可用 API。
 
 ## 安装依赖
 
@@ -75,6 +76,39 @@ bash ./scripts/install-linux.sh \
 ```bash
 bash ./scripts/install-linux.sh --no-systemd
 ```
+
+## Codex API 余额轮询
+
+如果服务器上安装了 cc-switch，并且多个 Codex opentoken provider 已在 cc-switch 中配置，可开启轮询：
+
+```bash
+bash ./scripts/install-linux.sh \
+  --enable-codex-balance-rotate \
+  --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
+  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+```
+
+安装器会创建：
+
+```text
+~/.config/systemd/user/codex-feishu-codex-balance-rotate.service
+~/.config/systemd/user/codex-feishu-codex-balance-rotate.timer
+```
+
+默认每 30 分钟运行一次，读取 cc-switch 数据库中的 Codex provider，过滤 `otokapi.com`，调用 `/v1/usage` 查询余额，并把余额最高的有效 key 写入：
+
+- `--codex-rotate-env-path`，默认是仓库目录下的 `codex.env`
+- `--codex-rotate-auth-path`，默认是 `$HOME/.codex/auth.json`
+
+可调整频率：
+
+```bash
+bash ./scripts/install-linux.sh \
+  --enable-codex-balance-rotate \
+  --codex-rotate-interval "*:0/15"
+```
+
+这套逻辑不做单条消息失败后的自动重试。如果某次回答因为余额或上游错误失败，让用户重新发送即可。
 
 ## systemd user service
 

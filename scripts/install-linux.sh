@@ -22,6 +22,13 @@ mini_app_secret=""
 deep_app_id=""
 deep_app_secret=""
 no_systemd=0
+enable_codex_balance_rotate=0
+codex_rotate_service_name="codex-feishu-codex-balance-rotate"
+codex_rotate_db_path="${HOME}/.cc-switch/cc-switch.db"
+codex_rotate_env_path=""
+codex_rotate_auth_path="${HOME}/.codex/auth.json"
+codex_rotate_interval="*:0/30"
+codex_rotate_min_balance="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -46,6 +53,13 @@ while [[ $# -gt 0 ]]; do
     --deep-app-id) deep_app_id="$2"; shift 2 ;;
     --deep-app-secret) deep_app_secret="$2"; shift 2 ;;
     --no-systemd) no_systemd=1; shift ;;
+    --enable-codex-balance-rotate) enable_codex_balance_rotate=1; shift ;;
+    --codex-rotate-service-name) codex_rotate_service_name="$2"; shift 2 ;;
+    --codex-rotate-db-path) codex_rotate_db_path="$2"; shift 2 ;;
+    --codex-rotate-env-path) codex_rotate_env_path="$2"; shift 2 ;;
+    --codex-rotate-auth-path) codex_rotate_auth_path="$2"; shift 2 ;;
+    --codex-rotate-interval) codex_rotate_interval="$2"; shift 2 ;;
+    --codex-rotate-min-balance) codex_rotate_min_balance="$2"; shift 2 ;;
     -h|--help) sed -n '1,140p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -85,6 +99,10 @@ toml_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+systemd_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
 replace_token() {
   local content="$1"
   local token="$2"
@@ -102,6 +120,9 @@ write_file() {
 install_root="$(cd "$install_root" && pwd)"
 if [[ -z "$workspace_path" ]]; then
   workspace_path="${install_root}/workspace"
+fi
+if [[ -z "$codex_rotate_env_path" ]]; then
+  codex_rotate_env_path="${install_root}/codex.env"
 fi
 
 echo "codex-feishu Linux installer"
@@ -158,6 +179,7 @@ for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh
   cp "$install_root/scripts/$script_name" "$workspace_path/scripts/$script_name"
   chmod +x "$workspace_path/scripts/$script_name"
 done
+chmod +x "$install_root/scripts/codex-balance-rotate.py" 2>/dev/null || true
 
 instructions="$(<"$install_root/templates/INSTRUCTIONS.md")"
 instructions="$(replace_token "$instructions" "__MINI_PROJECT__" "$mini_project")"
@@ -235,6 +257,38 @@ EOF
     systemctl --user daemon-reload
     systemctl --user enable --now "${service_name}.service"
     echo "Registered and started systemd user service: ${service_name}.service"
+
+    if [[ "$enable_codex_balance_rotate" -eq 1 ]]; then
+      rotate_service_path="${service_dir}/${codex_rotate_service_name}.service"
+      rotate_timer_path="${service_dir}/${codex_rotate_service_name}.timer"
+      mkdir -p "$(dirname "$codex_rotate_env_path")" "$(dirname "$codex_rotate_auth_path")"
+      cat >"$rotate_service_path" <<EOF
+[Unit]
+Description=codex-feishu Codex API balance rotation
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env python3 "$(systemd_escape "$install_root")/scripts/codex-balance-rotate.py" --db "$(systemd_escape "$codex_rotate_db_path")" --env "$(systemd_escape "$codex_rotate_env_path")" --auth "$(systemd_escape "$codex_rotate_auth_path")" --min-balance ${codex_rotate_min_balance}
+EOF
+      cat >"$rotate_timer_path" <<EOF
+[Unit]
+Description=Run codex-feishu Codex API balance rotation
+
+[Timer]
+OnBootSec=2min
+OnCalendar=${codex_rotate_interval}
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target
+EOF
+      systemctl --user daemon-reload
+      systemctl --user enable --now "${codex_rotate_service_name}.timer"
+      echo "Registered Codex balance rotation timer: ${codex_rotate_service_name}.timer"
+    fi
   else
     echo "systemctl not found; run scripts/start-cc-connect.sh manually or use --no-systemd" >&2
   fi

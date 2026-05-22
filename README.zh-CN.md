@@ -40,6 +40,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - `/help` 静态帮助和 `/dream` 工作区整理命令。
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
+- Linux 可选安装 Codex API 余额轮询：从 cc-switch 的 opentoken 账号里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
 - deep 收到 @ 后立即发独立 `收到`，随后继续处理最终结果；mini 只有决定处理普通消息时才发 `收到`。
 - 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
 - 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
@@ -188,6 +189,17 @@ Linux 只生成配置、不注册 systemd：
 ```bash
 bash ./scripts/install-linux.sh --no-systemd
 ```
+
+Linux 可选开启 Codex API 余额轮询：
+
+```bash
+bash ./scripts/install-linux.sh \
+  --enable-codex-balance-rotate \
+  --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
+  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+```
+
+轮询脚本只负责选择当前余额最高且 `/v1/usage` 可用的 opentoken provider，并写入 Codex auth。它不做单条消息失败后的自动重试；如果一次回答撞上余额或服务错误，用户重新发送即可使用下一次轮询/切换后的 key。
 
 ## mini 回复阈值
 

@@ -55,6 +55,7 @@ flowchart LR
 - Feishu reply continuation through `reply_to_trigger = true`.
 - Hidden Windows background runner and watchdog scheduled tasks.
 - Linux installer with systemd user service support.
+- Optional Linux Codex API balance rotation from cc-switch opentoken providers.
 - Hidden acknowledgement hook using `wscript.exe`.
 - Static `/help` command and `/dream` workspace maintenance command.
 - Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
@@ -156,6 +157,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 ```
 
 Use `-NoScheduledTasks` if you only want to generate config and workspace files.
+
+Optional Linux Codex API balance rotation:
+
+```bash
+bash ./scripts/install-linux.sh \
+  --enable-codex-balance-rotate \
+  --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
+  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+```
+
+The rotation script checks opentoken providers through `/v1/usage`, selects the highest positive remaining balance, and writes the selected key to Codex auth. It does not retry a failed in-flight chat request; users can resend after the next key switch.
 
 Linux non-interactive install:
 
