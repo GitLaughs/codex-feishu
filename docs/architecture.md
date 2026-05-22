@@ -39,8 +39,14 @@ Mini project:
 
 - Feishu app has group all-message permission.
 - cc-connect uses `group_reply_all = true`.
-- The model decides whether a reply is useful.
+- The `gpt-5.4-mini` project decides whether a reply is useful.
+- A configurable mini reply trigger threshold controls how conservative this
+  decision should be: `relaxed`, `medium`, or `strict`.
 - Files and useful context can be processed without an @ mention.
+
+The default threshold is `strict`. In that mode, casual chat and standalone
+question marks do not trigger replies; explicit bot-directed work, actionable
+tasks, file handling, or important project context can trigger replies.
 
 Deep project:
 

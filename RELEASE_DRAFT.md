@@ -1,17 +1,15 @@
-# codex-feishu v0.1.0
+# codex-feishu v0.1.1
 
-First public release candidate for dual-bot Codex routing in Feishu group chats.
+Adds configurable `gpt-5.4-mini` reply trigger thresholds for dual-bot Feishu
+group routing.
 
 ## Highlights
 
-- Dual Feishu app routing:
-  - mini bot monitors normal group messages;
-  - deep bot handles @ mentions directly.
-- Reply-chain based parallel sessions with `thread_isolation` and `reply_to_trigger`.
-- Hidden Windows scheduled-task runner and watchdog.
-- Hidden immediate `收到` acknowledgement hook.
-- Stream preview defaults for long-running Codex replies.
-- Local group workspace bootstrap with file classification and indexing.
+- New `-MiniTriggerThreshold` installer option.
+- Default mini threshold is `strict`.
+- `gpt-5.4-mini` now has explicit rules for relaxed, medium, and strict reply decisions.
+- Casual chat and standalone question marks stay silent by default.
+- File handling, explicit bot-directed work, actionable tasks, and important project context still trigger replies.
 
 ## Install
 
@@ -20,6 +18,25 @@ npm install -g cc-connect
 git clone https://github.com/<owner>/codex-feishu.git
 cd codex-feishu
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+Non-interactive example:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -GroupChatId "oc_xxx" `
+  -MiniProject "feishu-mini" `
+  -DeepProject "feishu-deep" `
+  -MiniModel "gpt-5.4-mini" `
+  -MiniEffort "medium" `
+  -MiniTriggerThreshold "strict" `
+  -DeepModel "gpt-5.5" `
+  -DeepEffort "high" `
+  -WorkspacePath "E:\FeishuCodexWorkspace" `
+  -MiniAppId "cli_xxx" `
+  -MiniAppSecret "..." `
+  -DeepAppId "cli_yyy" `
+  -DeepAppSecret "..."
 ```
 
 ## Feishu Console Checklist
@@ -46,17 +63,16 @@ Get-Content .\cc-connect-run.log -Tail 80
 
 Expected:
 
-- normal group message updates the mini project;
+- normal group messages wake the mini project;
+- mini replies only when the threshold policy says the message is worth a response;
 - @ mention updates the deep project;
-- Feishu reply continues the matching task session;
-- hook acknowledgements do not open terminal windows.
+- Feishu reply continues the matching task session.
 
-## Known Limitations
+## Notes
 
-- Windows-first release.
-- Requires manual Feishu app creation and permission approval.
-- Uses local scheduled tasks instead of a packaged Windows service.
-- Does not ship a GUI configuration wizard yet.
+- This is a configuration and deployment layer around `cc-connect`.
+- The threshold is enforced through generated project instructions, not a new
+  `cc-connect` protocol field.
 
 ## Attribution
 
@@ -66,4 +82,4 @@ See `NOTICE` and `THIRD_PARTY_NOTICES.md`.
 
 ## Full Changelog
 
-Initial release.
+See `CHANGELOG.md`.

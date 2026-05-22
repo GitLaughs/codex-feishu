@@ -79,6 +79,7 @@ try {
         -AdminOpenId "*" `
         -MiniModel "gpt-5.4-mini" `
         -MiniEffort "medium" `
+        -MiniTriggerThreshold "strict" `
         -DeepModel "gpt-5.5" `
         -DeepEffort "high" `
         -CodexMode "yolo" `
@@ -89,7 +90,15 @@ try {
         -NoScheduledTasks | Out-Null
 
     if (!(Test-Path -LiteralPath $configPath)) { Add-Failure "Install smoke did not generate config." }
-    if (!(Test-Path -LiteralPath (Join-Path $workspace "INSTRUCTIONS.md"))) { Add-Failure "Install smoke did not generate workspace instructions." }
+    $instructionsPath = Join-Path $workspace "INSTRUCTIONS.md"
+    if (!(Test-Path -LiteralPath $instructionsPath)) {
+        Add-Failure "Install smoke did not generate workspace instructions."
+    } else {
+        $instructions = Get-Content -LiteralPath $instructionsPath -Raw
+        if ($instructions -notmatch "Mini reply trigger threshold: ``strict``") {
+            Add-Failure "Install smoke did not write the mini trigger threshold."
+        }
+    }
     if (!(Test-Path -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs"))) { Add-Failure "Install smoke did not generate hidden ack wrapper." }
 }
 finally {

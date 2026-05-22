@@ -10,6 +10,7 @@ param(
     [string]$AdminOpenId = "",
     [string]$MiniModel = "",
     [string]$MiniEffort = "",
+    [string]$MiniTriggerThreshold = "",
     [string]$DeepModel = "",
     [string]$DeepEffort = "",
     [string]$CodexMode = "",
@@ -91,6 +92,7 @@ $deepProject = if ($DeepProject) { $DeepProject } else { Read-Value -Prompt "Dee
 $adminOpenId = if ($AdminOpenId) { $AdminOpenId } else { Read-Value -Prompt "Admin open_id (optional; use * to allow configured platform users)" -Default "*" }
 $miniModel = if ($MiniModel) { $MiniModel } else { Read-Value -Prompt "Mini model" -Default "gpt-5.4-mini" -Required }
 $miniEffort = if ($MiniEffort) { $MiniEffort } else { Read-Value -Prompt "Mini reasoning effort" -Default "medium" -Required }
+$miniTriggerThreshold = if ($MiniTriggerThreshold) { $MiniTriggerThreshold } else { Read-Value -Prompt "Mini reply trigger threshold (relaxed/medium/strict)" -Default "strict" -Required }
 $deepModel = if ($DeepModel) { $DeepModel } else { Read-Value -Prompt "Deep model" -Default "gpt-5.5" -Required }
 $deepEffort = if ($DeepEffort) { $DeepEffort } else { Read-Value -Prompt "Deep reasoning effort" -Default "high" -Required }
 $codexMode = if ($CodexMode) { $CodexMode } else { Read-Value -Prompt "Codex mode" -Default "yolo" -Required }
@@ -140,6 +142,7 @@ $instructions = $instructionsTemplate.
     Replace("__MINI_PROJECT__", $miniProject).
     Replace("__DEEP_PROJECT__", $deepProject).
     Replace("__MINI_MODEL__", $miniModel).
+    Replace("__MINI_TRIGGER_THRESHOLD__", $miniTriggerThreshold).
     Replace("__DEEP_MODEL__", $deepModel)
 Write-Utf8File -Path (Join-Path $WorkspacePath "INSTRUCTIONS.md") -Content $instructions
 

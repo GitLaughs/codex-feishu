@@ -4,9 +4,22 @@
 
 - The mini project monitors all group messages and decides whether to reply.
 - All-message wake does not mean all-message reply.
+- Mini reply trigger threshold: `__MINI_TRIGGER_THRESHOLD__`.
 - Stay silent for casual chat, simple acknowledgements, repeated information, or cases where humans already answered well.
 - Reply when mentioned, asked a question, assigned a task, asked to summarize/search/generate, or when a file needs organization.
 - Keep group replies short and useful.
+
+## Mini Trigger Threshold
+
+Use this policy when `__MINI_MODEL__` handles normal non-@ group messages:
+
+- `relaxed`: reply to likely useful questions, lightweight help requests, and project-relevant comments.
+- `medium`: reply only when the message is clearly a question, task, file event, or project-relevant decision point.
+- `strict`: reply only when the bot is clearly addressed, an actionable task is assigned, a file needs handling, or silence would lose important project context.
+
+The default is `strict`. A question mark alone is not enough to reply. Lifestyle
+or casual group chatter such as "what to eat tonight", "anyone gaming", or
+"are you going" should stay silent unless the bot is explicitly asked to answer.
 
 ## Mini vs Deep
 

@@ -5,6 +5,7 @@ Dual-bot Feishu/Lark group routing for Codex through `cc-connect`.
 `codex-feishu` turns a Feishu group into a practical Codex workspace:
 
 - a fast mini bot monitors all group messages and decides whether to speak;
+- the mini bot uses a configurable reply trigger threshold to avoid casual chatter;
 - a deep bot handles direct @ tasks with a stronger model;
 - Feishu reply chains become isolated task sessions;
 - immediate `received` acknowledgements run silently in the background;
@@ -25,7 +26,7 @@ This project uses two Feishu apps to separate those jobs:
 
 | Bot | Model | Trigger | Job |
 |---|---|---|---|
-| Mini bot | `gpt-5.4-mini` by default | all group messages | classify, stay silent, handle light work, organize files |
+| Mini bot | `gpt-5.4-mini` by default | all group messages, `strict` reply threshold | classify, stay silent, handle light work, organize files |
 | Deep bot | `gpt-5.5` by default | @ mentions only | handle complex tasks directly |
 
 ## Architecture
@@ -46,6 +47,7 @@ flowchart LR
 ## Features
 
 - Dual Feishu app routing: one all-message monitor, one @-only deep bot.
+- Configurable `gpt-5.4-mini` reply trigger threshold: `relaxed`, `medium`, or `strict`.
 - Parallel task sessions through `thread_isolation = true`.
 - Feishu reply continuation through `reply_to_trigger = true`.
 - Hidden Windows background runner and watchdog scheduled tasks.
@@ -102,6 +104,7 @@ The installer asks for:
 - deep app id and secret
 - group workspace path
 - project names, model names, and reasoning effort
+- mini reply trigger threshold
 
 The installer writes:
 
@@ -122,6 +125,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -AdminOpenId "*" `
   -MiniModel "gpt-5.4-mini" `
   -MiniEffort "medium" `
+  -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
   -CodexMode "yolo" `
@@ -140,8 +144,14 @@ Normal group message:
 
 1. mini bot receives it;
 2. acknowledgement hook can send standalone `收到`;
-3. mini decides whether to reply;
+3. mini applies the configured trigger threshold;
 4. casual chat stays silent.
+
+Mini trigger threshold:
+
+- `relaxed`: useful questions and project-relevant comments can trigger replies;
+- `medium`: clear questions, tasks, files, or decision points trigger replies;
+- `strict`: only explicit bot-directed work, actionable tasks, file handling, or important project context triggers replies.
 
 Deep task:
 
