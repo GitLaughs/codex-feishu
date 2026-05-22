@@ -1,0 +1,11 @@
+.cc-connect.local.toml
+*.log
+*.secret.*
+*.bak
+cc-connect-startup-hidden.vbs
+scripts/cc-connect-ack-hidden.vbs
+workspace/
+local_files/
+node_modules/
+*.tmp
+.tmp/

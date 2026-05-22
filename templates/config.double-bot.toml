@@ -1,0 +1,79 @@
+language = "zh"
+
+[log]
+level = "info"
+
+[display]
+thinking_messages = false
+tool_messages = false
+
+[stream_preview]
+enabled = true
+interval_ms = 1000
+min_delta_chars = 5
+max_chars = 2000
+
+[[hooks]]
+event = "message.received"
+type = "command"
+command = "wscript.exe //B //Nologo \"__INSTALL_ROOT_FWD__/scripts/cc-connect-ack-hidden.vbs\""
+async = true
+timeout = 8
+
+[[projects]]
+name = "__DEEP_PROJECT__"
+admin_from = "__ADMIN_OPEN_ID__"
+
+[projects.agent]
+type = "codex"
+
+[projects.agent.options]
+work_dir = "__WORKSPACE__"
+mode = "__CODEX_MODE__"
+model = "__DEEP_MODEL__"
+reasoning_effort = "__DEEP_EFFORT__"
+
+[[projects.platforms]]
+type = "feishu"
+
+[projects.platforms.options]
+app_id = "__DEEP_APP_ID__"
+app_secret = "__DEEP_APP_SECRET__"
+allow_from = "*"
+allow_chat = "__GROUP_CHAT_ID__"
+group_only = true
+group_reply_all = false
+share_session_in_channel = true
+thread_isolation = true
+reply_to_trigger = true
+reaction_emoji = "none"
+done_emoji = "none"
+
+[[projects]]
+name = "__MINI_PROJECT__"
+admin_from = "__ADMIN_OPEN_ID__"
+
+[projects.agent]
+type = "codex"
+
+[projects.agent.options]
+work_dir = "__WORKSPACE__"
+mode = "__CODEX_MODE__"
+model = "__MINI_MODEL__"
+reasoning_effort = "__MINI_EFFORT__"
+
+[[projects.platforms]]
+type = "feishu"
+
+[projects.platforms.options]
+app_id = "__MINI_APP_ID__"
+app_secret = "__MINI_APP_SECRET__"
+allow_from = "*"
+allow_chat = "__GROUP_CHAT_ID__"
+group_only = true
+group_reply_all = true
+share_session_in_channel = true
+thread_isolation = true
+reply_to_trigger = true
+reaction_emoji = "none"
+done_emoji = "none"

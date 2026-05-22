@@ -1,0 +1,23 @@
+codex-feishu
+
+This repository is licensed under the MIT License. See LICENSE.
+
+Third-party projects and services referenced by this repository keep their own
+licenses, trademarks, and terms. This repository does not vendor their source
+code unless explicitly stated.
+
+Primary dependency and inspiration:
+
+- cc-connect
+  - Repository: https://github.com/chenhg5/cc-connect
+  - License: MIT
+  - Role: Local messaging-platform bridge used by this project through its CLI
+    and configuration format.
+
+Platform and product names:
+
+- Feishu/Lark is a product of ByteDance/Lark Technologies.
+- GitHub is a product of GitHub, Inc.
+- OpenAI, Codex, and GPT model names are trademarks or product names of OpenAI.
+
+These names are used only to describe interoperability.

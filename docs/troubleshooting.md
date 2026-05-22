@@ -1,0 +1,77 @@
+# Troubleshooting
+
+## Normal Messages Do Not Wake the Mini Bot
+
+Check the Feishu mini app first:
+
+- `im.message.receive_v1` is subscribed.
+- group all-message permission is approved and published.
+- the app version with the permission change is published.
+- the mini bot is in the group.
+
+Then check locally:
+
+```powershell
+cc-connect sessions list
+Get-Content .\cc-connect-run.log -Tail 120
+```
+
+You should see `im.message.receive_v1` events for the mini app ID.
+
+## @ Mentions Go to the Wrong Bot
+
+Use two Feishu apps. The deep app should be @-only:
+
+```toml
+group_reply_all = false
+```
+
+The mini app can monitor all messages:
+
+```toml
+group_reply_all = true
+```
+
+If both projects share one app, all-message routing can capture @ messages before
+the intended deep route.
+
+## Windows Terminal Opens on Every Message
+
+The hook should call the hidden VBS wrapper:
+
+```toml
+command = "wscript.exe //B //Nologo \"E:/codex-feishu/scripts/cc-connect-ack-hidden.vbs\""
+```
+
+Re-run the installer or update the hook command manually.
+
+## Multiple cc-connect Processes Are Running
+
+Check the process tree:
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -like '*cc-connect*' } |
+  Select-Object ProcessId,ParentProcessId,Name,CommandLine
+```
+
+Stop stale task/process trees and restart the scheduled task:
+
+```powershell
+Stop-ScheduledTask -TaskName codex-feishu-cc-connect
+Start-ScheduledTask -TaskName codex-feishu-cc-connect
+```
+
+## Stream Preview Is Not Visible
+
+Confirm config:
+
+```toml
+[stream_preview]
+enabled = true
+interval_ms = 1000
+min_delta_chars = 5
+max_chars = 2000
+```
+
+Very short replies may finish before a preview update is sent.

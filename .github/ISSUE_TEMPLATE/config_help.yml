@@ -1,0 +1,30 @@
+name: Configuration help
+description: Ask for help with Feishu or cc-connect setup.
+title: "[Config]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: Redact app secrets, tokens, open IDs, and chat IDs before posting.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What routing behavior are you trying to achieve?
+    validations:
+      required: true
+  - type: textarea
+    id: sanitized_config
+    attributes:
+      label: Sanitized config
+      description: Paste only the relevant redacted config block.
+      render: toml
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      render: text
+    validations:
+      required: false
