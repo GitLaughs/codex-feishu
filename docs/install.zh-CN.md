@@ -1,6 +1,6 @@
 # 中文安装教程
 
-本文从零开始说明如何把 `codex-feishu` 部署到 Windows，并接入一个飞书/Lark 群聊。
+本文从零开始说明如何把 `codex-feishu` 部署到 Windows，并接入一个飞书/Lark 群聊。Linux 部署见 [Linux 安装教程](install-linux.zh-CN.md)。
 
 ## 目标效果
 

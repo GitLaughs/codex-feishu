@@ -18,3 +18,14 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: ./scripts/test.ps1
+
+  linux:
+    name: Linux validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Linux tests
+        shell: bash
+        run: bash ./scripts/test-linux.sh

@@ -1,44 +1,54 @@
-# codex-feishu v0.1.2
+# codex-feishu v0.2.0
 
-Syncs the published installer with the current local dual-bot workflow.
+Adds a Linux deployment package while preserving the existing Windows workflow.
 
 ## Highlights
 
-- Generated `AGENTS.md` now enforces group privacy boundaries and `NO_REPLY` silence rules.
-- Mini no longer auto-acknowledges every normal group message; it says `收到` only after deciding to handle the message.
-- Deep @ tasks still get immediate standalone `收到` through the hidden hook.
-- Added static `/help` and `/dream` commands.
-- Added Feishu/Lark helper scripts for resource download, event listening, and redacted health checks.
-- Group projects disable privileged cc-connect management commands by default.
+- Windows PowerShell installer and hidden runner remain supported.
+- New Linux installer: `scripts/install-linux.sh`.
+- New Linux TOML template: `templates/config.double-bot.linux.toml`.
+- New Linux helper scripts for ack, runner, `/help`, `/dream`, file import, Feishu resource download, event listening, and health checks.
+- Optional systemd user service for Linux background operation.
+- GitHub Actions now validates both Windows and Linux paths.
 
 ## Install
 
+Windows:
+
 ```powershell
 npm install -g cc-connect
-git clone https://github.com/<owner>/codex-feishu.git
+git clone https://github.com/GitLaughs/codex-feishu.git
 cd codex-feishu
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-Non-interactive example:
+Linux:
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
-  -GroupChatId "oc_xxx" `
-  -MiniProject "feishu-mini" `
-  -DeepProject "feishu-deep" `
-  -MiniModel "gpt-5.4-mini" `
-  -MiniEffort "medium" `
-  -MiniTriggerThreshold "strict" `
-  -DeepModel "gpt-5.5" `
-  -DeepEffort "high" `
-  -DreamModel "gpt-5.5" `
-  -DreamEffort "xhigh" `
-  -WorkspacePath "E:\FeishuCodexWorkspace" `
-  -MiniAppId "cli_xxx" `
-  -MiniAppSecret "..." `
-  -DeepAppId "cli_yyy" `
-  -DeepAppSecret "..."
+```bash
+git clone https://github.com/GitLaughs/codex-feishu.git
+cd codex-feishu
+bash ./scripts/install-linux.sh
+```
+
+Linux non-interactive example:
+
+```bash
+bash ./scripts/install-linux.sh \
+  --group-chat-id "oc_xxx" \
+  --mini-project "feishu-mini" \
+  --deep-project "feishu-deep" \
+  --mini-model "gpt-5.4-mini" \
+  --mini-effort "medium" \
+  --mini-trigger-threshold "strict" \
+  --deep-model "gpt-5.5" \
+  --deep-effort "high" \
+  --dream-model "gpt-5.5" \
+  --dream-effort "xhigh" \
+  --workspace-path "$HOME/codex-feishu-workspace" \
+  --mini-app-id "cli_xxx" \
+  --mini-app-secret "..." \
+  --deep-app-id "cli_yyy" \
+  --deep-app-secret "..."
 ```
 
 ## Feishu Console Checklist
@@ -70,7 +80,8 @@ Expected:
 - @ mention updates the deep project;
 - Feishu reply continues the matching task session;
 - `/help` returns the generated static guide;
-- `/dream` runs workspace maintenance from the generated workspace.
+- `/dream` runs workspace maintenance from the generated workspace;
+- Linux service can be inspected with `systemctl --user status codex-feishu-cc-connect.service`.
 
 ## Notes
 

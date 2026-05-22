@@ -73,13 +73,22 @@ using Feishu reply under the relevant message.
 
 ## Background Execution
 
-The install script registers:
+The Windows install script registers:
 
 - a hidden runner task that starts `cc-connect`;
 - a hidden watchdog task that restarts the runner if `cc-connect.exe` is gone.
 
 The acknowledgement hook uses a VBS wrapper and `wscript.exe` so Windows Terminal
 does not open for every incoming message.
+
+The Linux install script writes the same project/workspace config and can create
+a systemd user service:
+
+```text
+~/.config/systemd/user/codex-feishu-cc-connect.service
+```
+
+Linux hooks use `bash` scripts instead of VBS/PowerShell wrappers.
 
 ## Static Commands
 

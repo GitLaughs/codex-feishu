@@ -28,6 +28,58 @@ foreach ($file in $psFiles) {
     }
 }
 
+Write-Host "== Bash parse check =="
+$bash = Get-Command bash -ErrorAction SilentlyContinue
+$bashUsable = $false
+if ($bash) {
+    try {
+        $null = & $bash.Source --version 2>$null
+        $bashUsable = ($LASTEXITCODE -eq 0)
+    } catch {
+        $bashUsable = $false
+    }
+}
+function ConvertTo-BashPath {
+    param(
+        [string]$Path,
+        [string]$BashSource
+    )
+
+    $full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+    if ($BashSource -like "*\System32\bash.exe") {
+        if ($full -match "^([A-Za-z]):\\(.*)$") {
+            $drive = $Matches[1].ToLowerInvariant()
+            $rest = $Matches[2].Replace("\", "/")
+            return "/mnt/$drive/$rest"
+        }
+    }
+    return $full.Replace("\", "/")
+}
+
+function Quote-Bash {
+    param([string]$Value)
+    return "'" + $Value.Replace("'", "'\''") + "'"
+}
+
+if ($bashUsable) {
+    $rootBash = ConvertTo-BashPath -Path $Root -BashSource $bash.Source
+    $shFiles = Get-ChildItem -LiteralPath $Root -Recurse -Filter *.sh |
+        Where-Object { $_.FullName -notlike "*\.git\*" -and $_.FullName -notlike "*\.tmp\*" }
+    foreach ($file in $shFiles) {
+        $rel = $file.FullName.Substring($Root.Length).TrimStart("\").Replace("\", "/")
+        $cmd = "cd $(Quote-Bash $rootBash) && bash -n $(Quote-Bash $rel)"
+        $output = & $bash.Source -lc $cmd 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Failure "Bash parser errors in $($file.FullName): $($output | Out-String)"
+            Write-Host "FAIL $($file.FullName)" -ForegroundColor Red
+        } else {
+            Write-Host "OK   $($file.FullName)"
+        }
+    }
+} else {
+    Write-Host "SKIP bash not found or not usable"
+}
+
 Write-Host "== Secret and local-data scan =="
 $privateUserName = -join ([char[]](0x7528, 0x6237, 0x0033, 0x0030, 0x0039, 0x0032, 0x0032, 0x0034))
 $privateGroupName = -join ([char[]](0x96C6, 0x521B, 0x8D5B))
@@ -126,6 +178,34 @@ finally {
     Remove-Item -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs") -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $Root "cc-connect-startup-hidden.vbs") -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+if ($bashUsable) {
+    Write-Host "== Linux install smoke test =="
+    $linuxTmp = Join-Path $Root ".tmp\linux-install"
+    $linuxTmpBash = ConvertTo-BashPath -Path $linuxTmp -BashSource $bash.Source
+    $rootBash = ConvertTo-BashPath -Path $Root -BashSource $bash.Source
+    $cmd = @(
+        "cd $(Quote-Bash $rootBash)",
+        "rm -rf $(Quote-Bash $linuxTmpBash)",
+        "mkdir -p $(Quote-Bash $linuxTmpBash)",
+        "bash scripts/install-linux.sh --install-root $(Quote-Bash $rootBash) --config-path $(Quote-Bash "$linuxTmpBash/config.toml") --workspace-path $(Quote-Bash "$linuxTmpBash/workspace") --group-chat-id oc_test --mini-project feishu-mini --deep-project feishu-deep --admin-open-id '*' --mini-model gpt-5.4-mini --mini-effort medium --mini-trigger-threshold strict --deep-model gpt-5.5 --deep-effort high --dream-model gpt-5.5 --dream-effort xhigh --codex-mode yolo --mini-app-id cli_mini --mini-app-secret fake-mini-secret --deep-app-id cli_deep --deep-app-secret fake-deep-secret --no-systemd >/dev/null",
+        "test -f $(Quote-Bash "$linuxTmpBash/config.toml")",
+        "grep -q 'name = `"help`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
+        "grep -q 'name = `"dream`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
+        "grep -q 'disabled_commands = \[`"dir`", `"shell`", `"restart`", `"upgrade`", `"cron`", `"commands`", `"provider`"\]' $(Quote-Bash "$linuxTmpBash/config.toml")",
+        "! grep -q 'admin_from = `"\\*`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
+        "test -f $(Quote-Bash "$linuxTmpBash/workspace/AGENTS.md")",
+        "test -f $(Quote-Bash "$linuxTmpBash/workspace/scripts/dream_prompt.md")",
+        "test -f $(Quote-Bash "$linuxTmpBash/workspace/local_files/docs/help-guide.md")",
+        "test -f $(Quote-Bash "$linuxTmpBash/workspace/scripts/import-local-file.sh")",
+        "rm -rf $(Quote-Bash $linuxTmpBash)"
+    ) -join " && "
+    $output = & $bash.Source -lc $cmd 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Add-Failure "Linux install smoke failed: $($output | Out-String)"
+    }
+    Remove-Item -LiteralPath $linuxTmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if ($failures.Count -gt 0) {

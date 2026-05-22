@@ -9,6 +9,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 git status --short
 ```
 
+When bash is available, also run:
+
+```bash
+bash ./scripts/test-linux.sh
+```
+
 Confirm:
 
 - no generated `config.toml`;

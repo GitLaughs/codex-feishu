@@ -7,6 +7,15 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-23
+
+### Added
+
+- Linux installer, runner, ack hook, helper scripts, and Linux TOML template.
+- systemd user service support for Linux deployments.
+- Linux install guide and Linux CI validation.
+- Cross-platform release docs while preserving Windows PowerShell deployment.
+
 ## [0.1.2] - 2026-05-22
 
 ### Added

@@ -2,7 +2,7 @@
 
 Dual-bot Feishu/Lark group routing for Codex through `cc-connect`.
 
-[中文 README](README.zh-CN.md) · [中文安装教程](docs/install.zh-CN.md)
+[中文 README](README.zh-CN.md) · [中文安装教程](docs/install.zh-CN.md) · [Linux 中文安装](docs/install-linux.zh-CN.md)
 
 `codex-feishu` turns a Feishu group into a practical Codex workspace:
 
@@ -54,6 +54,7 @@ flowchart LR
 - Parallel task sessions through `thread_isolation = true`.
 - Feishu reply continuation through `reply_to_trigger = true`.
 - Hidden Windows background runner and watchdog scheduled tasks.
+- Linux installer with systemd user service support.
 - Hidden acknowledgement hook using `wscript.exe`.
 - Static `/help` command and `/dream` workspace maintenance command.
 - Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
@@ -65,8 +66,8 @@ flowchart LR
 
 ## Requirements
 
-- Windows 10 or Windows 11
-- PowerShell 5.1 or PowerShell 7
+- Windows 10/11 or Linux with bash/systemd
+- PowerShell 5.1 or PowerShell 7 for Windows installs
 - Node.js and npm
 - `cc-connect` installed globally
 - Two Feishu/Lark custom apps with bot capability
@@ -96,11 +97,19 @@ See [docs/feishu-console.md](docs/feishu-console.md) for the console checklist.
 
 ## Quick Start
 
-Clone or copy this repository, then run:
+Clone or copy this repository, then run on Windows:
 
 ```powershell
 cd E:\codex-feishu
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+Run on Linux:
+
+```bash
+git clone https://github.com/GitLaughs/codex-feishu.git
+cd codex-feishu
+bash ./scripts/install-linux.sh
 ```
 
 The installer asks for:
@@ -147,6 +156,31 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 ```
 
 Use `-NoScheduledTasks` if you only want to generate config and workspace files.
+
+Linux non-interactive install:
+
+```bash
+bash ./scripts/install-linux.sh \
+  --group-chat-id "oc_xxx" \
+  --mini-project "feishu-mini" \
+  --deep-project "feishu-deep" \
+  --admin-open-id "*" \
+  --mini-model "gpt-5.4-mini" \
+  --mini-effort "medium" \
+  --mini-trigger-threshold "strict" \
+  --deep-model "gpt-5.5" \
+  --deep-effort "high" \
+  --dream-model "gpt-5.5" \
+  --dream-effort "xhigh" \
+  --codex-mode "yolo" \
+  --workspace-path "$HOME/codex-feishu-workspace" \
+  --mini-app-id "cli_xxx" \
+  --mini-app-secret "..." \
+  --deep-app-id "cli_yyy" \
+  --deep-app-secret "..."
+```
+
+Use `--no-systemd` if you only want to generate config and workspace files on Linux.
 
 ## Expected Chat Behavior
 
@@ -212,18 +246,30 @@ Expected:
     troubleshooting.md
   scripts/
     install.ps1
+    install-linux.sh
     start-cc-connect.ps1
+    start-cc-connect.sh
     watch-cc-connect.ps1
+    watch-cc-connect.sh
     cc-connect-ack.ps1
+    cc-connect-ack.sh
     help.ps1
+    help.sh
     dream.ps1
+    dream.sh
     import-local-file.ps1
+    import-local-file.sh
     lark-download-resource.ps1
     lark-event-listener.ps1
     lark-health.ps1
+    lark-download-resource.sh
+    lark-event-listener.sh
+    lark-health.sh
     test.ps1
+    test-linux.sh
   templates/
     config.double-bot.toml
+    config.double-bot.linux.toml
     AGENTS.md
     INSTRUCTIONS.md
     dream_prompt.md
@@ -238,6 +284,7 @@ Expected:
 - [Architecture](docs/architecture.md)
 - [中文 README](README.zh-CN.md)
 - [中文安装教程](docs/install.zh-CN.md)
+- [Linux 中文安装教程](docs/install-linux.zh-CN.md)
 - [Feishu console setup](docs/feishu-console.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Release checklist](docs/release-checklist.md)

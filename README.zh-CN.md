@@ -2,7 +2,7 @@
 
 > 用两个飞书/Lark 机器人把 Codex 接入群聊：mini 机器人全量监听并判断是否回复，deep 机器人只处理 @ 触发的复杂任务。
 
-[English README](README.md) · [中文安装教程](docs/install.zh-CN.md) · [故障排查](docs/troubleshooting.md) · [MIT License](LICENSE)
+[English README](README.md) · [Windows 安装](docs/install.zh-CN.md) · [Linux 安装](docs/install-linux.zh-CN.md) · [故障排查](docs/troubleshooting.md) · [MIT License](LICENSE)
 
 `codex-feishu` 适合想把本地 Codex 接到飞书群里的个人或小团队。它不是新的聊天机器人框架，而是一套围绕
 [`cc-connect`](https://github.com/chenhg5/cc-connect) 的部署脚本、配置模板和使用约定。
@@ -39,6 +39,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - 支持流式预览，让长任务不再像“卡住了”。
 - `/help` 静态帮助和 `/dream` 工作区整理命令。
 - Windows 后台静默启动，不弹出终端窗口。
+- Linux 支持 `install-linux.sh` 和 systemd user service。
 - deep 收到 @ 后立即发独立 `收到`，随后继续处理最终结果；mini 只有决定处理普通消息时才发 `收到`。
 - 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
 - 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
@@ -72,8 +73,8 @@ flowchart LR
 
 需要：
 
-- Windows 10 或 Windows 11
-- PowerShell 5.1 或 PowerShell 7
+- Windows 10/11，或带 bash/systemd 的 Linux
+- Windows 安装需要 PowerShell 5.1 或 PowerShell 7
 - Node.js 和 npm
 - `cc-connect`
 - 两个飞书/Lark 自建应用，并开启机器人能力
@@ -90,15 +91,24 @@ cc-connect --version
 - mini app：申请群聊全量消息权限，订阅 `im.message.receive_v1`。
 - deep app：只需要普通消息事件订阅，用于 @ 触发，不建议开启群聊全量消息权限。
 
-完整步骤见 [中文安装教程](docs/install.zh-CN.md)。
+Windows 完整步骤见 [中文安装教程](docs/install.zh-CN.md)。
+Linux 完整步骤见 [Linux 安装教程](docs/install-linux.zh-CN.md)。
 
 ## 快速安装
 
-交互式安装：
+Windows 交互式安装：
 
 ```powershell
 cd E:\codex-feishu
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+Linux 交互式安装：
+
+```bash
+git clone https://github.com/GitLaughs/codex-feishu.git
+cd codex-feishu
+bash ./scripts/install-linux.sh
 ```
 
 安装器会询问：
@@ -150,6 +160,35 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -NoScheduledTasks
 ```
 
+Linux 非交互安装：
+
+```bash
+bash ./scripts/install-linux.sh \
+  --group-chat-id "oc_xxx" \
+  --mini-project "feishu-mini" \
+  --deep-project "feishu-deep" \
+  --admin-open-id "*" \
+  --mini-model "gpt-5.4-mini" \
+  --mini-effort "medium" \
+  --mini-trigger-threshold "strict" \
+  --deep-model "gpt-5.5" \
+  --deep-effort "high" \
+  --dream-model "gpt-5.5" \
+  --dream-effort "xhigh" \
+  --codex-mode "yolo" \
+  --workspace-path "$HOME/codex-feishu-workspace" \
+  --mini-app-id "cli_xxx" \
+  --mini-app-secret "..." \
+  --deep-app-id "cli_yyy" \
+  --deep-app-secret "..."
+```
+
+Linux 只生成配置、不注册 systemd：
+
+```bash
+bash ./scripts/install-linux.sh --no-systemd
+```
+
 ## mini 回复阈值
 
 `-MiniTriggerThreshold` 控制 mini bot 对普通群消息的保守程度：
@@ -189,18 +228,25 @@ Get-Content .\cc-connect-run.log -Tail 80
     troubleshooting.md
   scripts/
     install.ps1
+    install-linux.sh
     start-cc-connect.ps1
     watch-cc-connect.ps1
     cc-connect-ack.ps1
+    cc-connect-ack.sh
     help.ps1
     dream.ps1
     import-local-file.ps1
+    import-local-file.sh
     lark-download-resource.ps1
     lark-event-listener.ps1
     lark-health.ps1
+    lark-download-resource.sh
+    lark-event-listener.sh
+    lark-health.sh
     test.ps1
   templates/
     config.double-bot.toml
+    config.double-bot.linux.toml
     AGENTS.md
     INSTRUCTIONS.md
     dream_prompt.md

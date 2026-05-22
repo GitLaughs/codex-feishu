@@ -109,3 +109,16 @@ handling.
 If mini is acknowledging every message, check whether the hook was generated
 with `-AckMiniAllMessages` or whether custom instructions are telling mini to
 ack casual chat.
+
+## Linux systemd Service Does Not Start
+
+Check service status:
+
+```bash
+systemctl --user status codex-feishu-cc-connect.service
+journalctl --user -u codex-feishu-cc-connect.service -n 120
+```
+
+If `cc-connect` or `codex` is available in your interactive shell but not in the
+service, it is usually a PATH issue. Install Node.js/Codex into a system-visible
+PATH or run `scripts/start-cc-connect.sh` manually from the same shell profile.
