@@ -16,6 +16,7 @@ flowchart TB
     subgraph Local Windows Host
         C[cc-connect]
         H[message.received hook]
+        CMD[/help + /dream commands]
         W[workspace]
         S[scheduled task + watchdog]
     end
@@ -28,8 +29,10 @@ flowchart TB
     G --> M --> C --> AM
     G --> D --> C --> AD
     C --> H
+    C --> CMD
     AM --> W
     AD --> W
+    CMD --> W
     S --> C
 ```
 
@@ -77,3 +80,22 @@ The install script registers:
 
 The acknowledgement hook uses a VBS wrapper and `wscript.exe` so Windows Terminal
 does not open for every incoming message.
+
+## Static Commands
+
+The generated config includes:
+
+```toml
+[[commands]]
+name = "help"
+
+[[commands]]
+name = "dream"
+```
+
+`/help` returns a static guide from `local_files/docs/help-guide.md`.
+`/dream` runs a workspace maintenance pass from the group workspace, using the
+configured deep model and writing detailed notes under `memory`.
+
+Both group projects disable privileged cc-connect management commands such as
+`/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands`.

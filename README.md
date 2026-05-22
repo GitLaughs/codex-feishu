@@ -2,12 +2,15 @@
 
 Dual-bot Feishu/Lark group routing for Codex through `cc-connect`.
 
+[中文 README](README.zh-CN.md) · [中文安装教程](docs/install.zh-CN.md)
+
 `codex-feishu` turns a Feishu group into a practical Codex workspace:
 
 - a fast mini bot monitors all group messages and decides whether to speak;
 - the mini bot uses a configurable reply trigger threshold to avoid casual chatter;
 - a deep bot handles direct @ tasks with a stronger model;
 - Feishu reply chains become isolated task sessions;
+- `/help` and `/dream` provide static help and workspace maintenance without normal chat routing;
 - immediate `received` acknowledgements run silently in the background;
 - stream preview keeps long-running answers visible while Codex works;
 - files can be saved, classified, indexed, and summarized into a local workspace.
@@ -52,9 +55,12 @@ flowchart LR
 - Feishu reply continuation through `reply_to_trigger = true`.
 - Hidden Windows background runner and watchdog scheduled tasks.
 - Hidden acknowledgement hook using `wscript.exe`.
+- Static `/help` command and `/dream` workspace maintenance command.
+- Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
 - Stream preview tuned for visible progress during long replies.
-- Workspace bootstrap with `INSTRUCTIONS.md`, `KNOWLEDGE.md`, and `local_files`.
+- Workspace bootstrap with `AGENTS.md`, `INSTRUCTIONS.md`, `KNOWLEDGE.md`, `memory`, and `local_files`.
 - File import helper with safe names, type classification, SHA256 short hash, and Markdown indexing.
+- Feishu/Lark helper scripts for bounded event listening, resource download, and redacted health checks.
 - GitHub-ready project metadata: CI, release configuration, issue templates, and release checklist.
 
 ## Requirements
@@ -105,11 +111,13 @@ The installer asks for:
 - group workspace path
 - project names, model names, and reasoning effort
 - mini reply trigger threshold
+- `/dream` model and reasoning effort
 
 The installer writes:
 
 - `~\.cc-connect\config.toml`
 - a local group workspace
+- `AGENTS.md`, `INSTRUCTIONS.md`, `/help` guide, `/dream` prompt, memory folders, and file folders
 - hidden acknowledgement VBS wrapper
 - hidden scheduled tasks for cc-connect and the watchdog
 
@@ -128,6 +136,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
+  -DreamModel "gpt-5.5" `
+  -DreamEffort "xhigh" `
   -CodexMode "yolo" `
   -WorkspacePath "E:\FeishuCodexWorkspace" `
   -MiniAppId "cli_xxx" `
@@ -143,9 +153,9 @@ Use `-NoScheduledTasks` if you only want to generate config and workspace files.
 Normal group message:
 
 1. mini bot receives it;
-2. acknowledgement hook can send standalone `收到`;
-3. mini applies the configured trigger threshold;
-4. casual chat stays silent.
+2. mini applies the configured trigger threshold;
+3. if mini decides to handle it, the first visible reply is standalone `收到`;
+4. casual chat stays silent and receives no acknowledgement.
 
 Mini trigger threshold:
 
@@ -156,9 +166,15 @@ Mini trigger threshold:
 Deep task:
 
 1. user sends a root `@deep-bot ...` message;
-2. deep bot sends/benefits from immediate `收到`;
+2. the hook sends immediate standalone `收到`;
 3. deep model works directly, not through mini relay;
 4. stream preview updates the Feishu message during long output.
+5. long tasks should send a short progress update roughly once per minute.
+
+Static commands:
+
+- `/help`: returns `local_files/docs/help-guide.md` without model reasoning.
+- `/dream`: runs a bounded workspace maintenance pass and writes detailed notes under `memory`.
 
 Parallel tasks:
 
@@ -180,6 +196,8 @@ Expected:
 
 - normal group messages update the mini project;
 - @ messages update the deep project;
+- `/help` returns the generated static guide;
+- `/dream` runs from the group workspace;
 - only one `cc-connect.exe` process is running for the config;
 - no Windows Terminal tabs appear when hooks run.
 
@@ -197,11 +215,19 @@ Expected:
     start-cc-connect.ps1
     watch-cc-connect.ps1
     cc-connect-ack.ps1
+    help.ps1
+    dream.ps1
     import-local-file.ps1
+    lark-download-resource.ps1
+    lark-event-listener.ps1
+    lark-health.ps1
     test.ps1
   templates/
     config.double-bot.toml
+    AGENTS.md
     INSTRUCTIONS.md
+    dream_prompt.md
+    help-guide.md
   .github/
     workflows/ci.yml
     release.yml
@@ -210,6 +236,8 @@ Expected:
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [中文 README](README.zh-CN.md)
+- [中文安装教程](docs/install.zh-CN.md)
 - [Feishu console setup](docs/feishu-console.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Release checklist](docs/release-checklist.md)

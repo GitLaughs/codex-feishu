@@ -1,15 +1,15 @@
-# codex-feishu v0.1.1
+# codex-feishu v0.1.2
 
-Adds configurable `gpt-5.4-mini` reply trigger thresholds for dual-bot Feishu
-group routing.
+Syncs the published installer with the current local dual-bot workflow.
 
 ## Highlights
 
-- New `-MiniTriggerThreshold` installer option.
-- Default mini threshold is `strict`.
-- `gpt-5.4-mini` now has explicit rules for relaxed, medium, and strict reply decisions.
-- Casual chat and standalone question marks stay silent by default.
-- File handling, explicit bot-directed work, actionable tasks, and important project context still trigger replies.
+- Generated `AGENTS.md` now enforces group privacy boundaries and `NO_REPLY` silence rules.
+- Mini no longer auto-acknowledges every normal group message; it says `收到` only after deciding to handle the message.
+- Deep @ tasks still get immediate standalone `收到` through the hidden hook.
+- Added static `/help` and `/dream` commands.
+- Added Feishu/Lark helper scripts for resource download, event listening, and redacted health checks.
+- Group projects disable privileged cc-connect management commands by default.
 
 ## Install
 
@@ -32,6 +32,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
+  -DreamModel "gpt-5.5" `
+  -DreamEffort "xhigh" `
   -WorkspacePath "E:\FeishuCodexWorkspace" `
   -MiniAppId "cli_xxx" `
   -MiniAppSecret "..." `
@@ -66,7 +68,9 @@ Expected:
 - normal group messages wake the mini project;
 - mini replies only when the threshold policy says the message is worth a response;
 - @ mention updates the deep project;
-- Feishu reply continues the matching task session.
+- Feishu reply continues the matching task session;
+- `/help` returns the generated static guide;
+- `/dream` runs workspace maintenance from the generated workspace.
 
 ## Notes
 

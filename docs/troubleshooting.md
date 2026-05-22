@@ -75,3 +75,37 @@ max_chars = 2000
 ```
 
 Very short replies may finish before a preview update is sent.
+
+## /help or /dream Does Not Work
+
+Check the generated config:
+
+```toml
+[[commands]]
+name = "help"
+
+[[commands]]
+name = "dream"
+```
+
+Check the generated workspace:
+
+```powershell
+Test-Path .\scripts\help.ps1
+Test-Path .\scripts\dream.ps1
+Test-Path .\scripts\dream_prompt.md
+Test-Path .\local_files\docs\help-guide.md
+```
+
+`/dream` also requires the `codex` CLI to be available in the scheduled task
+environment.
+
+## Mini Bot Says Acknowledgement Too Often
+
+By default the hook only auto-acknowledges the deep project. The mini project
+should send `收到` itself only after it decides a normal group message is worth
+handling.
+
+If mini is acknowledging every message, check whether the hook was generated
+with `-AckMiniAllMessages` or whether custom instructions are telling mini to
+ack casual chat.

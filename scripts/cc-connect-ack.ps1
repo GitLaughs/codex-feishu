@@ -16,7 +16,9 @@ $messageText = @(
     $env:CC_HOOK_MESSAGE,
     $env:CC_HOOK_MESSAGE_TEXT
 ) -join "`n"
-$ccConnect = Join-Path $env:APPDATA "npm\cc-connect.cmd"
+$ccConnectExe = Join-Path $env:APPDATA "npm\node_modules\cc-connect\bin\cc-connect.exe"
+$ccConnectCmd = Join-Path $env:APPDATA "npm\cc-connect.cmd"
+$ccConnect = if (Test-Path -LiteralPath $ccConnectExe) { $ccConnectExe } else { $ccConnectCmd }
 $ackText = -join ([char[]](0x6536, 0x5230))
 
 if ($eventName -ne "message.received") { exit 0 }
@@ -27,6 +29,10 @@ $shouldAck = $false
 if ($project -eq $DeepProject) {
     $shouldAck = $true
 } elseif ($project -eq $MiniProject) {
+    # The mini project receives all group messages. By default it must stay
+    # silent until the agent decides the message is actionable.
+    if (!$AckMiniAllMessages) { exit 0 }
+
     $deepMention = $false
     if (![string]::IsNullOrWhiteSpace($messageText)) {
         $deepMention = $messageText -match $DeepMentionPattern

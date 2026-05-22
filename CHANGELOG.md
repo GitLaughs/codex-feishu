@@ -7,6 +7,21 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-22
+
+### Added
+
+- Generated group `AGENTS.md` with privacy boundaries, `NO_REPLY` silence rules, and deep/mini routing rules.
+- Static `/help` command and `/dream` workspace maintenance command.
+- Feishu/Lark helper scripts for resource download, bounded event listening, and redacted health checks.
+- Generated help guide, dream prompt, memory folders, and richer workspace bootstrap.
+
+### Changed
+
+- Mini hook no longer sends immediate `收到` by default; mini only acknowledges after deciding to handle a normal message.
+- Group projects now disable privileged cc-connect management commands by default.
+- Startup script now prefers the packaged `cc-connect.exe` and falls back to `cc-connect.cmd`.
+
 ## [0.1.1] - 2026-05-22
 
 ### Added

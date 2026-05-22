@@ -82,6 +82,8 @@ try {
         -MiniTriggerThreshold "strict" `
         -DeepModel "gpt-5.5" `
         -DeepEffort "high" `
+        -DreamModel "gpt-5.5" `
+        -DreamEffort "xhigh" `
         -CodexMode "yolo" `
         -MiniAppId "cli_mini" `
         -MiniAppSecret "fake-mini-secret" `
@@ -90,6 +92,17 @@ try {
         -NoScheduledTasks | Out-Null
 
     if (!(Test-Path -LiteralPath $configPath)) { Add-Failure "Install smoke did not generate config." }
+    if (Test-Path -LiteralPath $configPath) {
+        $config = Get-Content -LiteralPath $configPath -Raw
+        if ($config -notmatch 'name = "help"') { Add-Failure "Install smoke did not generate /help command." }
+        if ($config -notmatch 'name = "dream"') { Add-Failure "Install smoke did not generate /dream command." }
+        if ($config -notmatch 'disabled_commands = \["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"\]') {
+            Add-Failure "Install smoke did not disable privileged group commands."
+        }
+        if ($config -match 'admin_from = "\*"') {
+            Add-Failure "Install smoke should not grant wildcard group admin privileges."
+        }
+    }
     $instructionsPath = Join-Path $workspace "INSTRUCTIONS.md"
     if (!(Test-Path -LiteralPath $instructionsPath)) {
         Add-Failure "Install smoke did not generate workspace instructions."
@@ -97,6 +110,14 @@ try {
         $instructions = Get-Content -LiteralPath $instructionsPath -Raw
         if ($instructions -notmatch "Mini reply trigger threshold: ``strict``") {
             Add-Failure "Install smoke did not write the mini trigger threshold."
+        }
+    }
+    if (!(Test-Path -LiteralPath (Join-Path $workspace "AGENTS.md"))) { Add-Failure "Install smoke did not generate workspace AGENTS.md." }
+    if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\dream_prompt.md"))) { Add-Failure "Install smoke did not generate dream prompt." }
+    if (!(Test-Path -LiteralPath (Join-Path $workspace "local_files\docs\help-guide.md"))) { Add-Failure "Install smoke did not generate help guide." }
+    foreach ($scriptName in "lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1") {
+        if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\$scriptName"))) {
+            Add-Failure "Install smoke did not copy $scriptName."
         }
     }
     if (!(Test-Path -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs"))) { Add-Failure "Install smoke did not generate hidden ack wrapper." }

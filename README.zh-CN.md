@@ -1,0 +1,225 @@
+# codex-feishu
+
+> 用两个飞书/Lark 机器人把 Codex 接入群聊：mini 机器人全量监听并判断是否回复，deep 机器人只处理 @ 触发的复杂任务。
+
+[English README](README.md) · [中文安装教程](docs/install.zh-CN.md) · [故障排查](docs/troubleshooting.md) · [MIT License](LICENSE)
+
+`codex-feishu` 适合想把本地 Codex 接到飞书群里的个人或小团队。它不是新的聊天机器人框架，而是一套围绕
+[`cc-connect`](https://github.com/chenhg5/cc-connect) 的部署脚本、配置模板和使用约定。
+
+最短安装方式：
+
+```powershell
+npm install -g cc-connect
+git clone https://github.com/GitLaughs/codex-feishu.git
+cd codex-feishu
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+## 解决什么问题
+
+普通群聊机器人通常会卡在两个选择里：
+
+- 只在 @ 时触发：省 token，但收不到普通消息、文件和有用上下文。
+- 所有消息都触发：能处理文件和上下文，但闲聊也会消耗模型调用。
+
+这个项目用两个飞书应用拆开职责：
+
+| 机器人 | 默认模型 | 触发方式 | 主要职责 |
+|---|---|---|---|
+| mini bot | `gpt-5.4-mini` | 群聊全量消息，默认 `strict` 回复阈值 | 监听、判断是否回复、处理轻量问题、整理文件 |
+| deep bot | `gpt-5.5` | 只处理 @ 消息 | 直接处理复杂任务，不经过 mini 转发 |
+
+## 核心能力
+
+- 双飞书应用路由：mini 全量监听，deep 只处理 @。
+- `gpt-5.4-mini` 回复阈值：`relaxed`、`medium`、`strict`。
+- 飞书回复链隔离会话：不同人的不同任务可以并行处理。
+- @ 任务直接进入 deep bot，避免 mini 中转带来的误路由。
+- 支持流式预览，让长任务不再像“卡住了”。
+- `/help` 静态帮助和 `/dream` 工作区整理命令。
+- Windows 后台静默启动，不弹出终端窗口。
+- deep 收到 @ 后立即发独立 `收到`，随后继续处理最终结果；mini 只有决定处理普通消息时才发 `收到`。
+- 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
+- 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
+
+## 工作方式
+
+```mermaid
+flowchart LR
+    A[飞书群聊] --> B[mini app: 接收全部群消息]
+    A --> C[deep app: 只接收 @ 消息]
+    B --> D[mini Codex project]
+    C --> E[deep Codex project]
+    D --> F[gpt-5.4-mini]
+    E --> G[gpt-5.5]
+    D --> H[local_files / INDEX.md / KNOWLEDGE.md]
+    A --> I[飞书回复链]
+    I --> J[thread_isolation + reply_to_trigger]
+```
+
+典型行为：
+
+- 普通群消息先进入 mini bot，mini 根据阈值判断是否回复。
+- 闲聊、简单附和、和项目无关的消息默认静默。
+- 文件、明确任务、项目相关问题会被处理。
+- 用户 @ deep bot 时，任务直接进入 deep bot。
+- 用户用飞书“回复”继续某条任务时，会回到对应会话。
+- `/help` 直接返回静态指南，不进入模型推理。
+- `/dream` 使用 deep 模型整理本地工作区知识、索引和记忆。
+
+## 安装前准备
+
+需要：
+
+- Windows 10 或 Windows 11
+- PowerShell 5.1 或 PowerShell 7
+- Node.js 和 npm
+- `cc-connect`
+- 两个飞书/Lark 自建应用，并开启机器人能力
+
+安装 `cc-connect`：
+
+```powershell
+npm install -g cc-connect
+cc-connect --version
+```
+
+飞书侧需要两个应用：
+
+- mini app：申请群聊全量消息权限，订阅 `im.message.receive_v1`。
+- deep app：只需要普通消息事件订阅，用于 @ 触发，不建议开启群聊全量消息权限。
+
+完整步骤见 [中文安装教程](docs/install.zh-CN.md)。
+
+## 快速安装
+
+交互式安装：
+
+```powershell
+cd E:\codex-feishu
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+安装器会询问：
+
+- 飞书群 `chat_id`，例如 `oc_xxx`
+- mini app id 和 secret
+- deep app id 和 secret
+- 本地群聊工作区路径
+- 项目名、模型名、推理强度
+- mini 回复触发阈值
+- `/dream` 使用的模型和推理强度
+
+安装器会写入：
+
+- `~\.cc-connect\config.toml`
+- 本地群聊工作区
+- `AGENTS.md`、`INSTRUCTIONS.md`、`help-guide.md`、`dream_prompt.md`
+- 隐藏式 `收到` hook wrapper
+- Windows 计划任务和 watchdog
+
+## 非交互安装
+
+适合重复部署或记录团队配置：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -GroupChatId "oc_xxx" `
+  -MiniProject "feishu-mini" `
+  -DeepProject "feishu-deep" `
+  -AdminOpenId "*" `
+  -MiniModel "gpt-5.4-mini" `
+  -MiniEffort "medium" `
+  -MiniTriggerThreshold "strict" `
+  -DeepModel "gpt-5.5" `
+  -DeepEffort "high" `
+  -DreamModel "gpt-5.5" `
+  -DreamEffort "xhigh" `
+  -CodexMode "yolo" `
+  -WorkspacePath "E:\FeishuCodexWorkspace" `
+  -MiniAppId "cli_xxx" `
+  -MiniAppSecret "..." `
+  -DeepAppId "cli_yyy" `
+  -DeepAppSecret "..."
+```
+
+只生成配置和工作区，不注册计划任务：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -NoScheduledTasks
+```
+
+## mini 回复阈值
+
+`-MiniTriggerThreshold` 控制 mini bot 对普通群消息的保守程度：
+
+- `relaxed`：可能有用的问题、轻量请求、项目相关评论都可以回复。
+- `medium`：只回复清晰问题、任务、文件事件或项目决策点。
+- `strict`：默认值。只有明确叫机器人、明确分配任务、需要处理文件，或不处理会丢失重要项目上下文时才回复。
+
+注意：这个阈值写入生成的 `INSTRUCTIONS.md`，由 Codex 项目按规则执行；它不是 `cc-connect` 的底层协议字段。
+
+## 验证
+
+安装并把两个机器人拉进群后执行：
+
+```powershell
+cc-connect sessions list
+Get-Content .\cc-connect-run.log -Tail 80
+```
+
+预期结果：
+
+- 普通群消息能进入 mini project。
+- @ deep bot 的消息进入 deep project。
+- 飞书回复某条任务消息时，会继续对应会话。
+- `/help` 返回生成的静态指南。
+- `/dream` 在群聊工作区内执行整理。
+- hook 和后台任务不会弹出 Windows Terminal。
+
+## 项目结构
+
+```text
+.
+  docs/
+    install.zh-CN.md
+    architecture.md
+    feishu-console.md
+    troubleshooting.md
+  scripts/
+    install.ps1
+    start-cc-connect.ps1
+    watch-cc-connect.ps1
+    cc-connect-ack.ps1
+    help.ps1
+    dream.ps1
+    import-local-file.ps1
+    lark-download-resource.ps1
+    lark-event-listener.ps1
+    lark-health.ps1
+    test.ps1
+  templates/
+    config.double-bot.toml
+    AGENTS.md
+    INSTRUCTIONS.md
+    dream_prompt.md
+    help-guide.md
+```
+
+## 安全说明
+
+不要提交生成的 `config.toml`、飞书 app secret、用户 ID 或群 ID。
+
+本仓库只包含脚本和模板，不包含真实密钥。安装脚本会把密钥写入本机 `~\.cc-connect\config.toml`。
+
+## 致谢
+
+本项目是 [`cc-connect`](https://github.com/chenhg5/cc-connect) 的部署与配置层。
+`cc-connect` 提供飞书/Lark 接入、hook、流式预览、会话管理和平台桥接能力。
+
+许可证和第三方说明见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## License
+
+MIT. See [LICENSE](LICENSE).

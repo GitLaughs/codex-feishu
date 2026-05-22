@@ -11,7 +11,9 @@ if ([string]::IsNullOrWhiteSpace($LogPath)) {
     $LogPath = Join-Path $Root "cc-connect-run.log"
 }
 
-$ccConnect = Join-Path $env:APPDATA "npm\cc-connect.cmd"
+$ccConnectExe = Join-Path $env:APPDATA "npm\node_modules\cc-connect\bin\cc-connect.exe"
+$ccConnectCmd = Join-Path $env:APPDATA "npm\cc-connect.cmd"
+$ccConnect = if (Test-Path -LiteralPath $ccConnectExe) { $ccConnectExe } else { $ccConnectCmd }
 $gitPaths = @("C:\Program Files\Git\bin", "C:\Program Files\Git\usr\bin")
 
 Set-Location -LiteralPath $Root

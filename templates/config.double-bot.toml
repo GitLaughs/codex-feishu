@@ -13,6 +13,18 @@ interval_ms = 1000
 min_delta_chars = 5
 max_chars = 2000
 
+[[commands]]
+name = "help"
+description = "Static group guide, no agent trigger"
+exec = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"__WORKSPACE_FWD__/scripts/help.ps1\""
+work_dir = "__WORKSPACE__"
+
+[[commands]]
+name = "dream"
+description = "Group workspace memory maintenance"
+exec = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"__WORKSPACE_FWD__/scripts/dream.ps1\""
+work_dir = "__WORKSPACE__"
+
 [[hooks]]
 event = "message.received"
 type = "command"
@@ -22,7 +34,8 @@ timeout = 8
 
 [[projects]]
 name = "__DEEP_PROJECT__"
-admin_from = "__ADMIN_OPEN_ID__"
+disabled_commands = ["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"]
+__GROUP_ADMIN_LINE__
 
 [projects.agent]
 type = "codex"
@@ -51,7 +64,8 @@ done_emoji = "none"
 
 [[projects]]
 name = "__MINI_PROJECT__"
-admin_from = "__ADMIN_OPEN_ID__"
+disabled_commands = ["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"]
+__GROUP_ADMIN_LINE__
 
 [projects.agent]
 type = "codex"
