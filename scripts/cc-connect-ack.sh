@@ -23,7 +23,7 @@ message_text="${CC_HOOK_TEXT:-}
 ${CC_HOOK_CONTENT:-}
 ${CC_HOOK_MESSAGE:-}
 ${CC_HOOK_MESSAGE_TEXT:-}"
-ack_text="收到正在输出，请等等我。"
+ack_text="workingonit"
 
 if [[ "$event_name" != "message.received" ]]; then exit 0; fi
 if [[ -z "$project" || -z "$session" ]]; then exit 0; fi
@@ -32,17 +32,8 @@ cc_connect="$(command -v cc-connect || true)"
 if [[ -z "$cc_connect" ]]; then exit 0; fi
 
 should_ack=0
-if [[ "$project" == "$deep_project" ]]; then
+if [[ "${CODEX_FEISHU_TEXT_ACK_FALLBACK:-0}" == "1" ]]; then
   should_ack=1
-elif [[ "$project" == "$mini_project" ]]; then
-  if [[ "$ack_mini_all_messages" -ne 1 ]]; then
-    exit 0
-  fi
-  if [[ -n "$message_text" && "$message_text" =~ $deep_mention_pattern ]]; then
-    should_ack=0
-  else
-    should_ack=1
-  fi
 fi
 
 if [[ "$should_ack" -ne 1 ]]; then exit 0; fi

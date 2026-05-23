@@ -55,8 +55,13 @@ __DEEP_INSTANT_ACK_LINE__
 share_session_in_channel = true
 thread_isolation = true
 reply_to_trigger = true
-reaction_emoji = "none"
+reaction_emoji = "OnIt"
 done_emoji = "none"
+image_command_enabled = true
+image_script = "__WORKSPACE_FWD__/scripts/generate-image.js"
+image_workspace = "__WORKSPACE__"
+image_timeout_secs = 600
+image_triggers = ["/画图", "/生图", "/img", "画图", "生图"]
 
 [[projects]]
 name = "__MINI_PROJECT__"
@@ -86,5 +91,10 @@ __MINI_IGNORE_BOT_MENTIONS_LINE__
 share_session_in_channel = true
 thread_isolation = true
 reply_to_trigger = true
-reaction_emoji = "none"
+reaction_emoji = "OnIt"
 done_emoji = "none"
+image_command_enabled = true
+image_script = "__WORKSPACE_FWD__/scripts/generate-image.js"
+image_workspace = "__WORKSPACE__"
+image_timeout_secs = 600
+image_triggers = ["/画图", "/生图", "/img", "画图", "生图"]

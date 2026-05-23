@@ -60,6 +60,12 @@ mini app 的职责是“全量监听，但不一定回复”。
 - 开启机器人能力。
 - 开启事件订阅。
 - 订阅 `im.message.receive_v1`。
+- 在“权限管理”里导入：
+
+  ```text
+  templates/feishu-mini-scopes.json
+  ```
+
 - 申请群聊全量消息权限，控制台里通常显示为 `im:message.group_msg` 或“接收群聊中所有消息”。
 - 按控制台要求配置数据权限范围。
 - 修改权限后发布新版本，并等待审核/生效。
@@ -75,10 +81,24 @@ deep app 的职责是“只处理 @ 触发的复杂任务”。
 - 开启机器人能力。
 - 开启事件订阅。
 - 订阅 `im.message.receive_v1`。
+- 在“权限管理”里导入：
+
+  ```text
+  templates/feishu-deep-scopes.json
+  ```
+
 - 把机器人添加到同一个群。
 - 不要给它开启群聊全量消息权限，除非你明确想让它也监听所有消息。
 
 这样可以避免 @ 消息被 mini 的全量监听项目抢走。
+
+权限导入后必须到“版本管理”创建并发布新版本。只保存权限但不发布，线上机器人仍会按旧权限运行。
+
+可以用 App ID 直接打开控制台：
+
+```text
+https://open.feishu.cn/app/<app_id>
+```
 
 ## 5. 准备安装参数
 
@@ -136,7 +156,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 - 创建群聊工作区。
 - 生成 `AGENTS.md`、`INSTRUCTIONS.md`、`KNOWLEDGE.md`、`memory` 和 `local_files` 目录。
 - 生成 `/help` 指南和 `/dream` 维护提示词。
-- 复制文件归档、飞书资源下载、事件监听和健康检查脚本。
+- 复制文件归档、飞书资源下载、事件监听、健康检查和画图脚本。
 - 如果启用 `-EnableFamilyMemory`，复制家庭记忆脚本并创建 `memory/messages`、`memory/people`、`memory/family`、`memory/summaries`。
 - 注册 Windows 计划任务启动 `cc-connect`。
 - 注册 watchdog，定期检查并拉起 `cc-connect`。
@@ -219,6 +239,7 @@ Get-ScheduledTask -TaskName codex-feishu-cc-connect,codex-feishu-watchdog
 
 - `/help` 返回 `local_files/docs/help-guide.md` 的内容。
 - `/dream` 在工作区内整理 `KNOWLEDGE.md`、`memory/YYYY-MM-DD.md` 和 `memory/dreams/`。
+- `/画图`、`/生图`、`/img`、`画图`、`生图` 在支持 `image_command_enabled` 的运行时中直接生成图片。需要在运行服务的环境里配置 `FEISHU_IMAGE_API_KEY`，可选配置 `FEISHU_IMAGE_BASE_URL`、`FEISHU_IMAGE_API_MODE`、`FEISHU_IMAGE_IMAGES_MODEL`。
 
 ## 10. 常见问题
 

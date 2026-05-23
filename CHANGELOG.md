@@ -7,6 +7,14 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-23
+
+### Added
+
+- Platform image-generation command templates for Feishu `/画图`, `/生图`, `/img`, `画图`, and `生图`.
+- Shared `scripts/generate-image.js` helper with `FEISHU_IMAGE_*` environment overrides and OpenAI-compatible Images/Responses API support.
+- Installer smoke coverage for copying the image helper and generating `image_command_enabled` platform options.
+
 ## [0.5.0] - 2026-05-23
 
 ### Added

@@ -61,7 +61,8 @@ flowchart LR
 - Hidden Windows background runner and watchdog scheduled tasks.
 - Linux installer with systemd user service support.
 - Optional Linux Codex API balance rotation from cc-switch providers that expose an OpenAI-compatible usage endpoint.
-- Platform-layer immediate acknowledgement through patched `cc-connect` `instant_ack_text`.
+- Platform-layer working indicator through Feishu `reaction_emoji = "OnIt"`.
+- Platform-layer image generation commands: `/画图`, `/生图`, `/img`, `画图`, and `生图`.
 - Optional family memory capture hook for workspace-local household memory, tasks, and shopping lists.
 - Static `/help` command and `/dream` workspace maintenance command.
 - Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
@@ -92,13 +93,22 @@ Create two Feishu custom apps:
 
 1. Mini app
    - receives all group messages;
+   - imports `templates/feishu-mini-scopes.json`;
    - needs group all-message permission, usually shown as `im:message.group_msg`;
    - subscribes to `im.message.receive_v1`.
 
 2. Deep app
    - receives @ messages only;
+   - imports `templates/feishu-deep-scopes.json`;
    - subscribes to `im.message.receive_v1`;
    - should not be granted all-message group receive unless you explicitly want it.
+
+After permission changes, create and publish a new Feishu app version. Console
+URL format:
+
+```text
+https://open.feishu.cn/app/<app_id>
+```
 
 See [docs/feishu-console.md](docs/feishu-console.md) for the console checklist.
 
@@ -152,7 +162,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
-  -DeepInstantAckText "收到正在输出，请等等我。" `
   -DreamModel "gpt-5.5" `
   -DreamEffort "xhigh" `
   -CodexMode "yolo" `
@@ -191,7 +200,6 @@ bash ./scripts/install-linux.sh \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
-  --deep-instant-ack-text "收到正在输出，请等等我。" \
   --dream-model "gpt-5.5" \
   --dream-effort "xhigh" \
   --codex-mode "yolo" \
@@ -211,7 +219,7 @@ Normal group message:
 
 1. mini bot receives it;
 2. mini applies the configured trigger threshold;
-3. if mini decides to handle it, the first visible reply is standalone `收到正在输出，请等等我。`;
+3. if mini decides to handle it, the platform adds an `OnIt` / workingonit reaction first;
 4. casual chat stays silent and receives no acknowledgement.
 
 Mini trigger threshold:
@@ -223,7 +231,7 @@ Mini trigger threshold:
 Deep task:
 
 1. user sends a root `@deep-bot ...` message;
-2. the Feishu platform route sends immediate standalone `收到正在输出，请等等我。` when the runtime supports `instant_ack_text`;
+2. the Feishu platform route adds an immediate `OnIt` / workingonit reaction when the runtime supports message reactions;
 3. deep model works directly, not through mini relay;
 4. stream preview updates the Feishu message during long output.
 5. long tasks should send a short progress update roughly once per minute.
@@ -236,6 +244,16 @@ Static commands:
 
 - `/help`: returns `local_files/docs/help-guide.md` without model reasoning.
 - `/dream`: runs a bounded workspace maintenance pass and writes detailed notes under `memory`.
+- `/画图`, `/生图`, `/img`, `画图`, `生图`: when the runtime supports `image_command_enabled`, the Feishu platform calls `scripts/generate-image.js`, uploads the generated image, and records metadata under `memory/image-events-YYYY-MM-DD.jsonl`.
+
+Image generation needs an OpenAI-compatible image API key in the service environment, for example:
+
+```bash
+FEISHU_IMAGE_BASE_URL=https://api.openai.com/v1
+FEISHU_IMAGE_API_KEY=sk-...
+FEISHU_IMAGE_API_MODE=images
+FEISHU_IMAGE_IMAGES_MODEL=gpt-image-1
+```
 
 Optional family memory:
 

@@ -29,7 +29,7 @@ or casual group chatter such as "what to eat tonight", "anyone gaming", or
 - If the mini project sees an @ task for the deep bot, return exactly `NO_REPLY`.
 - `NO_REPLY` is the cc-connect silent sentinel. Do not explain it and do not send acknowledgement.
 - Non-@ complex tasks should ask the user to @ the deep bot.
-- If the mini project handles a normal non-@ group task, first send standalone `收到正在输出，请等等我。`, then do the work. Chatter gets no acknowledgement.
+- If the mini project handles a normal non-@ group task, rely on the platform `OnIt` / workingonit reaction as the first acknowledgement, then answer with the useful result. Chatter gets no acknowledgement.
 
 ## Parallel Sessions
 
@@ -61,6 +61,7 @@ If cc-connect only exposes a Feishu `message_id` and resource key, use `scripts/
 
 - `/help`: static guide from `local_files/docs/help-guide.md`; no model reasoning.
 - `/dream`: workspace maintenance pass that updates `KNOWLEDGE.md`, `memory/YYYY-MM-DD.md`, and optional `memory/dreams/` reports.
+- `/画图`, `/生图`, `/img`, `画图`, `生图`: fixed platform image-generation commands when the runtime supports `image_command_enabled`. Generated images are saved under `local_files/generated/images/`, with metadata in `memory/image-events-YYYY-MM-DD.jsonl`.
 
 ## Security Boundary
 

@@ -191,6 +191,7 @@ Linux 安装器会生成：
   - 如果启用家庭记忆，还会生成 `memory/messages`、`memory/people`、`memory/family`、`memory/summaries`
 - `local_files/docs/help-guide.md`
 - `scripts/dream_prompt.md`
+- `scripts/generate-image.js`
 - Linux 版 helper scripts：
   - `help.sh`
   - `dream.sh`

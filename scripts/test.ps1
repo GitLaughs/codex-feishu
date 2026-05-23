@@ -62,8 +62,6 @@ function Quote-Bash {
     return "'" + $Value.Replace("'", "'\''") + "'"
 }
 
-$ackText = -join ([char[]](0x6536, 0x5230, 0x6B63, 0x5728, 0x8F93, 0x51FA, 0xFF0C, 0x8BF7, 0x7B49, 0x7B49, 0x6211, 0x3002))
-
 if ($bashUsable) {
     $rootBash = ConvertTo-BashPath -Path $Root -BashSource $bash.Source
     $shFiles = Get-ChildItem -LiteralPath $Root -Recurse -Filter *.sh |
@@ -138,7 +136,6 @@ try {
         -MiniTriggerThreshold "strict" `
         -DeepModel "gpt-5.5" `
         -DeepEffort "high" `
-        -DeepInstantAckText $ackText `
         -DreamModel "gpt-5.5" `
         -DreamEffort "xhigh" `
         -CodexMode "yolo" `
@@ -163,8 +160,17 @@ try {
         if (!$config.Contains('ignore_bot_mentions = ["feishu-deep", "ou_deep"]')) {
             Add-Failure "Install smoke did not generate mini ignored bot mention routing guard."
         }
-        if (!$config.Contains("instant_ack_text = `"$ackText`"")) {
-            Add-Failure "Install smoke did not generate platform instant ack text."
+        if ($config.Contains("instant_ack_text = ")) {
+            Add-Failure "Install smoke should not generate text instant ack by default."
+        }
+        if (($config | Select-String -Pattern 'reaction_emoji = "OnIt"' -AllMatches).Matches.Count -lt 2) {
+            Add-Failure "Install smoke did not enable OnIt reaction emoji for both bot projects."
+        }
+        if (($config | Select-String -Pattern 'image_command_enabled = true' -AllMatches).Matches.Count -lt 2) {
+            Add-Failure "Install smoke did not enable platform image commands for both bot projects."
+        }
+        if (!$config.Contains("generate-image.js")) {
+            Add-Failure "Install smoke did not configure the image generation helper."
         }
         if ($config.Contains("cc-connect-ack-hidden.vbs")) {
             Add-Failure "Install smoke should not use the legacy ack hook for immediate acknowledgement."
@@ -185,7 +191,7 @@ try {
     if (!(Test-Path -LiteralPath (Join-Path $workspace "AGENTS.md"))) { Add-Failure "Install smoke did not generate workspace AGENTS.md." }
     if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\dream_prompt.md"))) { Add-Failure "Install smoke did not generate dream prompt." }
     if (!(Test-Path -LiteralPath (Join-Path $workspace "local_files\docs\help-guide.md"))) { Add-Failure "Install smoke did not generate help guide." }
-    foreach ($scriptName in "lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1") {
+    foreach ($scriptName in "lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js") {
         if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\$scriptName"))) {
             Add-Failure "Install smoke did not copy $scriptName."
         }

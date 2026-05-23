@@ -1,0 +1,28 @@
+{
+  "scopes": {
+    "tenant": [
+      "im:message",
+      "im:message.p2p_msg:readonly",
+      "im:message.group_at_msg:readonly",
+      "im:message.group_msg",
+      "im:message:send_as_bot",
+      "im:message:readonly",
+      "im:message:update",
+      "im:resource",
+      "cardkit:card:read",
+      "cardkit:card:write",
+      "im:chat:readonly",
+      "im:chat:update",
+      "im:chat.members:read",
+      "im:chat.members:write_only",
+      "im:chat.announcement:read",
+      "im:chat.announcement:write_only",
+      "drive:drive.metadata:readonly",
+      "drive:file:upload",
+      "drive:file:download",
+      "space:folder:create",
+      "contact:user.base:readonly"
+    ],
+    "user": []
+  }
+}

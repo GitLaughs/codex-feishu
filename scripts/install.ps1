@@ -14,7 +14,7 @@
     [string]$MiniTriggerThreshold = "",
     [string]$DeepModel = "",
     [string]$DeepEffort = "",
-    [string]$DeepInstantAckText = "收到正在输出，请等等我。",
+    [string]$DeepInstantAckText = "",
     [string]$DreamModel = "",
     [string]$DreamEffort = "",
     [string]$CodexMode = "",
@@ -119,6 +119,12 @@ Write-Host "codex-feishu installer" -ForegroundColor Cyan
 Write-Host "Install root: $InstallRoot"
 Write-Host "Config path:  $ConfigPath"
 Write-Host ""
+Write-Host "Feishu permission templates:" -ForegroundColor Cyan
+Write-Host "  Mini app: $InstallRoot\templates\feishu-mini-scopes.json"
+Write-Host "  Deep app: $InstallRoot\templates\feishu-deep-scopes.json"
+Write-Host "Before testing, import these in Feishu Open Platform -> App -> Permissions, then create and publish a new version."
+Write-Host "Mini includes im:message.group_msg for all group messages; deep intentionally does not."
+Write-Host ""
 
 $groupChatId = if ($GroupChatId) { $GroupChatId } else { Read-Value -Prompt "Feishu group chat_id (oc_xxx)" -Required }
 $miniProject = if ($MiniProject) { $MiniProject } else { Read-Value -Prompt "Mini project name" -Default "feishu-mini" -Required }
@@ -197,7 +203,7 @@ timeout = 8
 "@
 }
 
-foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1") {
+foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js") {
     Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\$scriptName") -Force
 }
 if ($EnableFamilyMemory) {
@@ -304,7 +310,10 @@ if (!$NoScheduledTasks) {
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "1. Confirm Feishu console permissions and event subscription."
-Write-Host "2. Invite both bots to the group."
-Write-Host "3. Send a normal group message to test mini monitoring."
-Write-Host "4. @ the deep bot to test deep routing."
+Write-Host "1. Feishu console: open https://open.feishu.cn/app/<app_id> for each app."
+Write-Host "2. Permissions: import templates\feishu-mini-scopes.json into mini and templates\feishu-deep-scopes.json into deep."
+Write-Host "3. Events: subscribe both apps to im.message.receive_v1; only mini should have all-message group receive."
+Write-Host "4. Version: create and publish a new app version after permission changes."
+Write-Host "5. Invite both bots to the group."
+Write-Host "6. Send a normal group message to test mini monitoring."
+Write-Host "7. @ the deep bot to test deep routing."

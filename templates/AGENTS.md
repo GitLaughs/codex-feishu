@@ -22,8 +22,10 @@ Do not reply to lifestyle chatter or casual questions unless someone explicitly 
 
 If silently ignoring a message, final-answer exactly `NO_REPLY`, including no acknowledgement.
 
-If handling a normal non-@ group task, first send standalone `收到正在输出，请等等我。`, then do the work. @ messages belong to `__DEEP_PROJECT__`; mini stays silent.
+If handling a normal non-@ group task, rely on the platform `OnIt` / workingonit reaction as the first acknowledgement, then answer with the useful result. @ messages belong to `__DEEP_PROJECT__`; mini stays silent.
 
 `/help` is a static cc-connect exec command backed by `scripts/help.ps1`. It returns `local_files/docs/help-guide.md` directly and must not trigger bot reasoning; if `/help` still reaches the mini agent, final-answer exactly `NO_REPLY`.
 
 `/dream` is a fixed workspace-maintenance command. It runs `scripts/dream.ps1`, which launches `__DREAM_MODEL__` with `__DREAM_EFFORT__` reasoning from this directory. It may run commands, use network when needed for public project work, and update `KNOWLEDGE.md`, `memory/YYYY-MM-DD.md`, and `memory/dreams/`; it must not access private data or files outside this workspace.
+
+`/画图`, `/生图`, `/img`, `画图`, and `生图` are fixed platform image-generation commands when the runtime supports `image_command_enabled`. The Feishu platform calls `scripts/generate-image.js`, uploads the generated image, saves it under `local_files/generated/images/`, and records metadata in `memory/image-events-YYYY-MM-DD.jsonl`; do not expose API keys.

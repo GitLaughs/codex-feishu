@@ -44,7 +44,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
 - Linux 可选安装 Codex API 余额轮询：从 cc-switch 中兼容 OpenAI API 的 provider 里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
-- deep 收到 @ 后立即发独立 `收到正在输出，请等等我。`，随后继续处理最终结果；mini 只有决定处理普通消息时才发同样的提示。
+- 机器人决定处理消息时先给原消息加 `OnIt` / workingonit 表情 reaction；mini 静默时不加额外回复。
+- 支持平台层画图命令：`/画图`、`/生图`、`/img`、`画图`、`生图`。
 - 可选家庭记忆捕获：把明确的“记住 / 待办 / 购物 / 查记忆”消息写到工作区本地 `memory` 文件。
 - 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
 - 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
@@ -94,8 +95,14 @@ cc-connect --version
 
 飞书侧需要两个应用：
 
-- mini app：申请群聊全量消息权限，订阅 `im.message.receive_v1`。
-- deep app：只需要普通消息事件订阅，用于 @ 触发，不建议开启群聊全量消息权限。
+- mini app：导入 `templates/feishu-mini-scopes.json`，申请群聊全量消息权限，订阅 `im.message.receive_v1`。
+- deep app：导入 `templates/feishu-deep-scopes.json`，只用于 @ 触发，不建议开启群聊全量消息权限。
+
+权限变更后必须在飞书开放平台创建并发布新版本。控制台入口格式：
+
+```text
+https://open.feishu.cn/app/<app_id>
+```
 
 Windows 完整步骤见 [中文安装教程](docs/install.zh-CN.md)。
 Linux 完整步骤见 [Linux 安装教程](docs/install-linux.zh-CN.md)。
@@ -206,6 +213,19 @@ bash ./scripts/install-linux.sh \
 ```
 
 轮询脚本只负责选择当前余额最高且 `/v1/usage` 可用的 cc-switch provider，并写入 Codex auth。provider 不固定为某个服务名，只要兼容预期的 OpenAI API usage 返回即可。warmup 默认先试 Responses API；如果 provider 明确不支持 Responses，会自动改用 chat completions warmup。它不做单条消息失败后的自动重试；如果一次回答撞上余额或服务错误，用户重新发送即可使用下一次轮询/切换后的 key。
+
+## 画图命令
+
+当运行时支持 `image_command_enabled` 时，安装器生成的 Feishu 配置会启用 `/画图`、`/生图`、`/img`、`画图`、`生图`。平台层会直接调用 `scripts/generate-image.js`，上传图片，并把图片保存到 `local_files/generated/images/`，元数据写入 `memory/image-events-YYYY-MM-DD.jsonl`。
+
+服务环境需要提供兼容 OpenAI Images API 的图像 key，例如：
+
+```bash
+FEISHU_IMAGE_BASE_URL=https://api.openai.com/v1
+FEISHU_IMAGE_API_KEY=sk-...
+FEISHU_IMAGE_API_MODE=images
+FEISHU_IMAGE_IMAGES_MODEL=gpt-image-1
+```
 
 ## 可选家庭记忆
 

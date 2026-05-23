@@ -15,7 +15,7 @@ mini_ignore_bot_mentions=""
 mini_trigger_threshold=""
 deep_model=""
 deep_effort=""
-deep_instant_ack_text="收到正在输出，请等等我。"
+deep_instant_ack_text=""
 dream_model=""
 dream_effort=""
 codex_mode=""
@@ -171,6 +171,12 @@ echo "codex-feishu Linux installer"
 echo "Install root: ${install_root}"
 echo "Config path:  ${config_path}"
 echo ""
+echo "Feishu permission templates:"
+echo "  Mini app: ${install_root}/templates/feishu-mini-scopes.json"
+echo "  Deep app: ${install_root}/templates/feishu-deep-scopes.json"
+echo "Before testing, import these in Feishu Open Platform -> App -> Permissions, then create and publish a new version."
+echo "Mini includes im:message.group_msg for all group messages; deep intentionally does not."
+echo ""
 
 [[ -n "$group_chat_id" ]] || group_chat_id="$(read_value "Feishu group chat_id (oc_xxx)" "" 1)"
 [[ -n "$mini_project" ]] || mini_project="$(read_value "Mini project name" "feishu-mini" 1)"
@@ -217,9 +223,9 @@ if [[ ! -f "$knowledge_path" ]]; then
   printf '# Knowledge\n' >"$knowledge_path"
 fi
 
-for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh lark-event-listener.sh help.sh dream.sh; do
+for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh lark-event-listener.sh help.sh dream.sh generate-image.js; do
   cp "$install_root/scripts/$script_name" "$workspace_path/scripts/$script_name"
-  chmod +x "$workspace_path/scripts/$script_name"
+  chmod +x "$workspace_path/scripts/$script_name" 2>/dev/null || true
 done
 if [[ "$enable_family_memory" -eq 1 ]]; then
   for script_name in family-memory-capture.py family-memory-capture.ps1 cc-connect-memory-hook.sh test-family-memory.ps1 test-family-memory-hook.ps1; do
@@ -369,7 +375,10 @@ fi
 
 echo ""
 echo "Next steps:"
-echo "1. Confirm Feishu console permissions and event subscription."
-echo "2. Invite both bots to the group."
-echo "3. Send a normal group message to test mini monitoring."
-echo "4. @ the deep bot to test deep routing."
+echo "1. Feishu console: open https://open.feishu.cn/app/<app_id> for each app."
+echo "2. Permissions: import templates/feishu-mini-scopes.json into mini and templates/feishu-deep-scopes.json into deep."
+echo "3. Events: subscribe both apps to im.message.receive_v1; only mini should have all-message group receive."
+echo "4. Version: create and publish a new app version after permission changes."
+echo "5. Invite both bots to the group."
+echo "6. Send a normal group message to test mini monitoring."
+echo "7. @ the deep bot to test deep routing."
