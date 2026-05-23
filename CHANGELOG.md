@@ -7,6 +7,28 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-23
+
+### Added
+
+- Optional family memory capture workflow for explicit remember, forget, task, shopping-list, and memory-read messages.
+- Windows installer flag `-EnableFamilyMemory` and Linux installer flag `--enable-family-memory`.
+- Platform-layer deep acknowledgement generation through `instant_ack_text`.
+- Family memory smoke tests for direct capture and hook execution.
+- Codex provider rotation fallback for providers that do not support the Responses API.
+
+### Changed
+
+- Double-bot templates no longer use the legacy `message.received` acknowledgement hook by default.
+- README and install docs now describe the current reproducible dual-bot flow, including mention routing, platform acknowledgements, optional family memory, and cc-switch provider rotation.
+- Codex balance rotation now treats cc-switch Codex entries as generic providers instead of filtering to a single provider domain.
+
+### Fixed
+
+- Kept immediate deep acknowledgements out of terminal/hook scripts so Feishu receives acknowledgement from the platform route.
+
+## [0.4.1] - 2026-05-23
+
 ### Fixed
 
 - Restored immediate acknowledgement delivery by retrying `cc-connect send` briefly when hooks fire before a session is ready.
@@ -25,7 +47,7 @@ versioning once public releases begin.
 
 ### Added
 
-- Codex API balance rotation script for cc-switch opentoken providers.
+- Codex API balance rotation script for cc-switch providers with an OpenAI-compatible usage endpoint.
 - Optional Linux installer flags to register a systemd user timer for Codex API balance rotation.
 - Documentation for the rotation behavior and its non-retry boundary.
 

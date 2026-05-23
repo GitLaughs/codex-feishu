@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Root = (Split-Path -Parent $PSScriptRoot)
 )
 
@@ -19,7 +19,8 @@ $psFiles = Get-ChildItem -LiteralPath $Root -Recurse -Filter *.ps1 |
 foreach ($file in $psFiles) {
     $tokens = $null
     $errors = $null
-    [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+    $source = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
+    [System.Management.Automation.Language.Parser]::ParseInput($source, $file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
     if ($errors) {
         Add-Failure "Parser errors in $($file.FullName): $($errors[0].Message)"
         Write-Host "FAIL $($file.FullName)" -ForegroundColor Red
@@ -60,6 +61,8 @@ function Quote-Bash {
     param([string]$Value)
     return "'" + $Value.Replace("'", "'\''") + "'"
 }
+
+$ackText = -join ([char[]](0x6536, 0x5230, 0x6B63, 0x5728, 0x8F93, 0x51FA, 0xFF0C, 0x8BF7, 0x7B49, 0x7B49, 0x6211, 0x3002))
 
 if ($bashUsable) {
     $rootBash = ConvertTo-BashPath -Path $Root -BashSource $bash.Source
@@ -135,6 +138,7 @@ try {
         -MiniTriggerThreshold "strict" `
         -DeepModel "gpt-5.5" `
         -DeepEffort "high" `
+        -DeepInstantAckText $ackText `
         -DreamModel "gpt-5.5" `
         -DreamEffort "xhigh" `
         -CodexMode "yolo" `
@@ -142,21 +146,31 @@ try {
         -MiniAppSecret "fake-mini-secret" `
         -DeepAppId "cli_deep" `
         -DeepAppSecret "fake-deep-secret" `
+        -EnableFamilyMemory `
         -NoScheduledTasks | Out-Null
 
     if (!(Test-Path -LiteralPath $configPath)) { Add-Failure "Install smoke did not generate config." }
     if (Test-Path -LiteralPath $configPath) {
-        $config = Get-Content -LiteralPath $configPath -Raw
-        if ($config -notmatch 'name = "help"') { Add-Failure "Install smoke did not generate /help command." }
-        if ($config -notmatch 'name = "dream"') { Add-Failure "Install smoke did not generate /dream command." }
-        if ($config -notmatch 'disabled_commands = \["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"\]') {
+        $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8
+        if (!$config.Contains('name = "help"')) { Add-Failure "Install smoke did not generate /help command." }
+        if (!$config.Contains('name = "dream"')) { Add-Failure "Install smoke did not generate /dream command." }
+        if (!$config.Contains('disabled_commands = ["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"]')) {
             Add-Failure "Install smoke did not disable privileged group commands."
         }
-        if ($config -match 'admin_from = "\*"') {
+        if ($config.Contains('admin_from = "*"')) {
             Add-Failure "Install smoke should not grant wildcard group admin privileges."
         }
-        if ($config -notmatch 'ignore_bot_mentions = \["feishu-deep", "ou_deep"\]') {
+        if (!$config.Contains('ignore_bot_mentions = ["feishu-deep", "ou_deep"]')) {
             Add-Failure "Install smoke did not generate mini ignored bot mention routing guard."
+        }
+        if (!$config.Contains("instant_ack_text = `"$ackText`"")) {
+            Add-Failure "Install smoke did not generate platform instant ack text."
+        }
+        if ($config.Contains("cc-connect-ack-hidden.vbs")) {
+            Add-Failure "Install smoke should not use the legacy ack hook for immediate acknowledgement."
+        }
+        if (!$config.Contains("cc-connect-memory-hook.ps1")) {
+            Add-Failure "Install smoke did not generate optional family memory hook."
         }
     }
     $instructionsPath = Join-Path $workspace "INSTRUCTIONS.md"
@@ -176,7 +190,17 @@ try {
             Add-Failure "Install smoke did not copy $scriptName."
         }
     }
-    if (!(Test-Path -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs"))) { Add-Failure "Install smoke did not generate hidden ack wrapper." }
+    foreach ($scriptName in "family-memory-capture.ps1","family-memory-capture.py","cc-connect-memory-hook.ps1","test-family-memory.ps1","test-family-memory-hook.ps1") {
+        if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\$scriptName"))) {
+            Add-Failure "Install smoke did not copy optional family memory script $scriptName."
+        }
+    }
+    foreach ($folder in "memory\messages","memory\people","memory\family","memory\summaries") {
+        if (!(Test-Path -LiteralPath (Join-Path $workspace $folder))) {
+            Add-Failure "Install smoke did not create optional family memory folder $folder."
+        }
+    }
+    if (Test-Path -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs")) { Add-Failure "Install smoke generated legacy hidden ack wrapper." }
 }
 finally {
     Remove-Item -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs") -Force -ErrorAction SilentlyContinue
@@ -184,33 +208,26 @@ finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+Write-Host "== Family memory smoke tests =="
+foreach ($testScript in "test-family-memory.ps1","test-family-memory-hook.ps1") {
+    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\$testScript") -Workspace $Root 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Add-Failure "$testScript failed: $($output | Out-String)"
+    } else {
+        Write-Host "OK   scripts\$testScript"
+    }
+}
+
 if ($bashUsable) {
-    Write-Host "== Linux install smoke test =="
-    $linuxTmp = Join-Path $Root ".tmp\linux-install"
-    $linuxTmpBash = ConvertTo-BashPath -Path $linuxTmp -BashSource $bash.Source
     $rootBash = ConvertTo-BashPath -Path $Root -BashSource $bash.Source
-    $cmd = @(
-        "cd $(Quote-Bash $rootBash)",
-        "rm -rf $(Quote-Bash $linuxTmpBash)",
-        "mkdir -p $(Quote-Bash $linuxTmpBash)",
-        "bash scripts/install-linux.sh --install-root $(Quote-Bash $rootBash) --config-path $(Quote-Bash "$linuxTmpBash/config.toml") --workspace-path $(Quote-Bash "$linuxTmpBash/workspace") --group-chat-id oc_test --mini-project feishu-mini --deep-project feishu-deep --admin-open-id '*' --mini-model gpt-5.4-mini --mini-effort medium --mini-ignore-bot-mentions feishu-deep,ou_deep --mini-trigger-threshold strict --deep-model gpt-5.5 --deep-effort high --dream-model gpt-5.5 --dream-effort xhigh --codex-mode yolo --mini-app-id cli_mini --mini-app-secret fake-mini-secret --deep-app-id cli_deep --deep-app-secret fake-deep-secret --no-systemd >/dev/null",
-        "test -f $(Quote-Bash "$linuxTmpBash/config.toml")",
-        "grep -q 'name = `"help`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
-        "grep -q 'name = `"dream`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
-        "grep -q 'disabled_commands = \[`"dir`", `"shell`", `"restart`", `"upgrade`", `"cron`", `"commands`", `"provider`"\]' $(Quote-Bash "$linuxTmpBash/config.toml")",
-        "! grep -q 'admin_from = `"\\*`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
-        "grep -q 'ignore_bot_mentions = \[`"feishu-deep`", `"ou_deep`"\]' $(Quote-Bash "$linuxTmpBash/config.toml")",
-        "test -f $(Quote-Bash "$linuxTmpBash/workspace/AGENTS.md")",
-        "test -f $(Quote-Bash "$linuxTmpBash/workspace/scripts/dream_prompt.md")",
-        "test -f $(Quote-Bash "$linuxTmpBash/workspace/local_files/docs/help-guide.md")",
-        "test -f $(Quote-Bash "$linuxTmpBash/workspace/scripts/import-local-file.sh")",
-        "rm -rf $(Quote-Bash $linuxTmpBash)"
-    ) -join " && "
+    Write-Host "== Linux test wrapper =="
+    $cmd = "cd $(Quote-Bash $rootBash) && bash scripts/test-linux.sh"
     $output = & $bash.Source -lc $cmd 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Add-Failure "Linux install smoke failed: $($output | Out-String)"
+        Add-Failure "Linux test wrapper failed: $($output | Out-String)"
+    } else {
+        Write-Host "OK   scripts/test-linux.sh"
     }
-    Remove-Item -LiteralPath $linuxTmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if ($failures.Count -gt 0) {

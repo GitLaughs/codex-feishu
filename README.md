@@ -12,9 +12,10 @@ Dual-bot Feishu/Lark group routing for Codex through `cc-connect`.
 - a deep bot handles direct @ tasks with a stronger model;
 - Feishu reply chains become isolated task sessions;
 - `/help` and `/dream` provide static help and workspace maintenance without normal chat routing;
-- immediate `received` acknowledgements run silently in the background;
+- deep @ tasks can send an immediate platform acknowledgement without a command hook;
 - stream preview keeps long-running answers visible while Codex works;
 - files can be saved, classified, indexed, and summarized into a local workspace.
+- optional family-memory scripts can capture explicit `remember`, task, and shopping-list messages into workspace-local files.
 
 This repository contains scripts and templates only. It does not contain app
 secrets, user IDs, group IDs, or generated local config.
@@ -57,8 +58,9 @@ flowchart LR
 - Feishu reply continuation through `reply_to_trigger = true`.
 - Hidden Windows background runner and watchdog scheduled tasks.
 - Linux installer with systemd user service support.
-- Optional Linux Codex API balance rotation from cc-switch opentoken providers.
-- Hidden acknowledgement hook using `wscript.exe`.
+- Optional Linux Codex API balance rotation from cc-switch providers that expose an OpenAI-compatible usage endpoint.
+- Platform-layer immediate acknowledgement through patched `cc-connect` `instant_ack_text`.
+- Optional family memory capture hook for workspace-local household memory, tasks, and shopping lists.
 - Static `/help` command and `/dream` workspace maintenance command.
 - Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
 - Stream preview tuned for visible progress during long replies.
@@ -130,7 +132,6 @@ The installer writes:
 - `~\.cc-connect\config.toml`
 - a local group workspace
 - `AGENTS.md`, `INSTRUCTIONS.md`, `/help` guide, `/dream` prompt, memory folders, and file folders
-- hidden acknowledgement VBS wrapper
 - hidden scheduled tasks for cc-connect and the watchdog
 
 ## Non-Interactive Install
@@ -149,6 +150,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
+  -DeepInstantAckText "收到正在输出，请等等我。" `
   -DreamModel "gpt-5.5" `
   -DreamEffort "xhigh" `
   -CodexMode "yolo" `
@@ -156,7 +158,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniAppId "cli_xxx" `
   -MiniAppSecret "..." `
   -DeepAppId "cli_yyy" `
-  -DeepAppSecret "..."
+  -DeepAppSecret "..." `
+  -EnableFamilyMemory
 ```
 
 Use `-NoScheduledTasks` if you only want to generate config and workspace files.
@@ -170,7 +173,7 @@ bash ./scripts/install-linux.sh \
   --codex-rotate-auth-path "$HOME/.codex/auth.json"
 ```
 
-The rotation script checks opentoken providers through `/v1/usage`, selects the highest positive remaining balance, and writes the selected key to Codex auth. It does not retry a failed in-flight chat request; users can resend after the next key switch.
+The rotation script checks configured cc-switch providers through `/v1/usage`, selects the highest positive remaining balance, and writes the selected key to Codex auth. It is provider-agnostic as long as the provider exposes the expected OpenAI-compatible usage response. Warmup uses the Responses API first and falls back to chat completions when the provider reports that Responses is unsupported. It does not retry a failed in-flight chat request; users can resend after the next key switch.
 
 Linux non-interactive install:
 
@@ -186,6 +189,7 @@ bash ./scripts/install-linux.sh \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
+  --deep-instant-ack-text "收到正在输出，请等等我。" \
   --dream-model "gpt-5.5" \
   --dream-effort "xhigh" \
   --codex-mode "yolo" \
@@ -193,7 +197,8 @@ bash ./scripts/install-linux.sh \
   --mini-app-id "cli_xxx" \
   --mini-app-secret "..." \
   --deep-app-id "cli_yyy" \
-  --deep-app-secret "..."
+  --deep-app-secret "..." \
+  --enable-family-memory
 ```
 
 Use `--no-systemd` if you only want to generate config and workspace files on Linux.
@@ -216,7 +221,7 @@ Mini trigger threshold:
 Deep task:
 
 1. user sends a root `@deep-bot ...` message;
-2. the hook sends immediate standalone `收到正在输出，请等等我。`;
+2. the Feishu platform route sends immediate standalone `收到正在输出，请等等我。` when the runtime supports `instant_ack_text`;
 3. deep model works directly, not through mini relay;
 4. stream preview updates the Feishu message during long output.
 5. long tasks should send a short progress update roughly once per minute.
@@ -229,6 +234,13 @@ Static commands:
 
 - `/help`: returns `local_files/docs/help-guide.md` without model reasoning.
 - `/dream`: runs a bounded workspace maintenance pass and writes detailed notes under `memory`.
+
+Optional family memory:
+
+- enable it with `-EnableFamilyMemory` on Windows or `--enable-family-memory` on Linux;
+- the hook records only into the configured workspace under `memory/messages`, `memory/people`, and `memory/family`;
+- supported explicit commands include `记住：...`, `忘掉：...`, `待办：...`, `购物：...`, and `你记得什么`;
+- this hook is for memory capture only. It is not the immediate acknowledgement mechanism.
 
 Parallel tasks:
 
@@ -273,6 +285,10 @@ Expected:
     watch-cc-connect.sh
     cc-connect-ack.ps1
     cc-connect-ack.sh
+    cc-connect-memory-hook.ps1
+    cc-connect-memory-hook.sh
+    family-memory-capture.ps1
+    family-memory-capture.py
     help.ps1
     help.sh
     dream.ps1

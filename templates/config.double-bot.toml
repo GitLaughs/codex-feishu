@@ -25,12 +25,7 @@ description = "Group workspace memory maintenance"
 exec = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"__WORKSPACE_FWD__/scripts/dream.ps1\""
 work_dir = "__WORKSPACE__"
 
-[[hooks]]
-event = "message.received"
-type = "command"
-command = "wscript.exe //B //Nologo \"__INSTALL_ROOT_FWD__/scripts/cc-connect-ack-hidden.vbs\""
-async = true
-timeout = 8
+__FAMILY_MEMORY_HOOK_BLOCK__
 
 [[projects]]
 name = "__DEEP_PROJECT__"
@@ -56,6 +51,7 @@ allow_from = "*"
 allow_chat = "__GROUP_CHAT_ID__"
 group_only = true
 group_reply_all = false
+__DEEP_INSTANT_ACK_LINE__
 share_session_in_channel = true
 thread_isolation = true
 reply_to_trigger = true

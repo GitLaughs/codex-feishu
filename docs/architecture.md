@@ -15,7 +15,7 @@ flowchart TB
 
     subgraph Local Windows Host
         C[cc-connect]
-        H[message.received hook]
+        H[optional memory hook]
         CMD[/help + /dream commands]
         W[workspace]
         S[scheduled task + watchdog]
@@ -59,6 +59,22 @@ Deep project:
 - cc-connect uses `group_reply_all = false`.
 - Only @ mentions wake the deep model.
 - Complex work stays in the deep bot's own thread/session.
+- Patched runtimes can send a platform-layer acknowledgement with
+  `instant_ack_text`, before the model begins long work.
+
+## Immediate Acknowledgement
+
+Immediate “received” messages are a Feishu platform option, not a default
+`message.received` command hook:
+
+```toml
+instant_ack_text = "收到正在输出，请等等我。"
+```
+
+This keeps acknowledgement delivery in the route that already knows which bot
+and message are being handled. The legacy `cc-connect-ack.*` scripts remain in
+the repository for older deployments, but the generated double-bot templates do
+not use them by default.
 
 ## Mention/Topic Guard
 
@@ -93,8 +109,8 @@ The Windows install script registers:
 - a hidden runner task that starts `cc-connect`;
 - a hidden watchdog task that restarts the runner if `cc-connect.exe` is gone.
 
-The acknowledgement hook uses a VBS wrapper and `wscript.exe` so Windows Terminal
-does not open for every incoming message.
+The default configuration does not need an acknowledgement hook, so incoming
+messages do not spawn a hidden ack process.
 
 The Linux install script writes the same project/workspace config and can create
 a systemd user service:
@@ -104,6 +120,24 @@ a systemd user service:
 ```
 
 Linux hooks use `bash` scripts instead of VBS/PowerShell wrappers.
+
+## Optional Family Memory Hook
+
+When enabled, the installer adds a single `message.received` hook for local
+memory capture:
+
+```toml
+[[hooks]]
+event = "message.received"
+type = "command"
+command = "... cc-connect-memory-hook ..."
+async = true
+timeout = 8
+```
+
+The hook is intentionally narrow. It filters by project, ignores non-message
+events, and records explicit memory/task/shopping-list messages under the
+workspace `memory` folder. It does not send acknowledgements.
 
 ## Static Commands
 

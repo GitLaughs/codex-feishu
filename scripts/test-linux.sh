@@ -58,6 +58,7 @@ bash "$root/scripts/install-linux.sh" \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
+  --deep-instant-ack-text "收到正在输出，请等等我。" \
   --dream-model "gpt-5.5" \
   --dream-effort "xhigh" \
   --codex-mode "yolo" \
@@ -65,6 +66,7 @@ bash "$root/scripts/install-linux.sh" \
   --mini-app-secret "fake-mini-secret" \
   --deep-app-id "cli_deep" \
   --deep-app-secret "fake-deep-secret" \
+  --enable-family-memory \
   --no-systemd >/dev/null
 
 [[ -f "$tmp/config.toml" ]] || add_failure "Linux install did not generate config."
@@ -75,11 +77,16 @@ if grep -q 'admin_from = "\*"' "$tmp/config.toml"; then
   add_failure "Linux install should not grant wildcard group admin privileges."
 fi
 grep -q 'ignore_bot_mentions = \["feishu-deep", "ou_deep"\]' "$tmp/config.toml" || add_failure "Linux install did not generate mini ignored bot mention routing guard."
+grep -q 'instant_ack_text = "收到正在输出，请等等我。"' "$tmp/config.toml" || add_failure "Linux install did not generate platform instant ack text."
+grep -q 'cc-connect-memory-hook.sh' "$tmp/config.toml" || add_failure "Linux install did not generate optional family memory hook."
 [[ -f "$tmp/workspace/AGENTS.md" ]] || add_failure "Linux install did not generate AGENTS.md."
 [[ -f "$tmp/workspace/INSTRUCTIONS.md" ]] || add_failure "Linux install did not generate INSTRUCTIONS.md."
 [[ -f "$tmp/workspace/scripts/dream_prompt.md" ]] || add_failure "Linux install did not generate dream prompt."
 [[ -f "$tmp/workspace/local_files/docs/help-guide.md" ]] || add_failure "Linux install did not generate help guide."
 [[ -f "$tmp/workspace/scripts/import-local-file.sh" ]] || add_failure "Linux install did not copy import-local-file.sh."
+[[ -f "$tmp/workspace/scripts/family-memory-capture.py" ]] || add_failure "Linux install did not copy family-memory-capture.py."
+[[ -f "$tmp/workspace/scripts/cc-connect-memory-hook.sh" ]] || add_failure "Linux install did not copy cc-connect-memory-hook.sh."
+[[ -d "$tmp/workspace/memory/family" ]] || add_failure "Linux install did not create family memory folder."
 
 rm -rf "$tmp"
 

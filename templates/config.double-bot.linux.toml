@@ -25,12 +25,7 @@ description = "Group workspace memory maintenance"
 exec = "bash \"__WORKSPACE__/scripts/dream.sh\""
 work_dir = "__WORKSPACE__"
 
-[[hooks]]
-event = "message.received"
-type = "command"
-command = "bash \"__INSTALL_ROOT__/scripts/cc-connect-ack.sh\" --mini-project \"__MINI_PROJECT__\" --deep-project \"__DEEP_PROJECT__\" --deep-mention-pattern \"(@_user_|__DEEP_PROJECT__)\""
-async = true
-timeout = 8
+__FAMILY_MEMORY_HOOK_BLOCK__
 
 [[projects]]
 name = "__DEEP_PROJECT__"
@@ -56,6 +51,7 @@ allow_from = "*"
 allow_chat = "__GROUP_CHAT_ID__"
 group_only = true
 group_reply_all = false
+__DEEP_INSTANT_ACK_LINE__
 share_session_in_channel = true
 thread_isolation = true
 reply_to_trigger = true

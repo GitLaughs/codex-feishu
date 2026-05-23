@@ -15,6 +15,7 @@ mini_ignore_bot_mentions=""
 mini_trigger_threshold=""
 deep_model=""
 deep_effort=""
+deep_instant_ack_text="收到正在输出，请等等我。"
 dream_model=""
 dream_effort=""
 codex_mode=""
@@ -23,13 +24,17 @@ mini_app_secret=""
 deep_app_id=""
 deep_app_secret=""
 no_systemd=0
+enable_family_memory=0
 enable_codex_balance_rotate=0
 codex_rotate_service_name="codex-feishu-codex-balance-rotate"
 codex_rotate_db_path="${HOME}/.cc-switch/cc-switch.db"
 codex_rotate_env_path=""
 codex_rotate_auth_path="${HOME}/.codex/auth.json"
+codex_rotate_config_path="${HOME}/.codex/config.toml"
+codex_rotate_fallback_file="${HOME}/.cc-switch/codex-fallback-providers.json"
 codex_rotate_interval="*:0/30"
 codex_rotate_min_balance="0"
+codex_rotate_extra_args=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,6 +52,7 @@ while [[ $# -gt 0 ]]; do
     --mini-trigger-threshold) mini_trigger_threshold="$2"; shift 2 ;;
     --deep-model) deep_model="$2"; shift 2 ;;
     --deep-effort) deep_effort="$2"; shift 2 ;;
+    --deep-instant-ack-text) deep_instant_ack_text="$2"; shift 2 ;;
     --dream-model) dream_model="$2"; shift 2 ;;
     --dream-effort) dream_effort="$2"; shift 2 ;;
     --codex-mode) codex_mode="$2"; shift 2 ;;
@@ -55,13 +61,19 @@ while [[ $# -gt 0 ]]; do
     --deep-app-id) deep_app_id="$2"; shift 2 ;;
     --deep-app-secret) deep_app_secret="$2"; shift 2 ;;
     --no-systemd) no_systemd=1; shift ;;
+    --enable-family-memory) enable_family_memory=1; shift ;;
     --enable-codex-balance-rotate) enable_codex_balance_rotate=1; shift ;;
     --codex-rotate-service-name) codex_rotate_service_name="$2"; shift 2 ;;
     --codex-rotate-db-path) codex_rotate_db_path="$2"; shift 2 ;;
     --codex-rotate-env-path) codex_rotate_env_path="$2"; shift 2 ;;
     --codex-rotate-auth-path) codex_rotate_auth_path="$2"; shift 2 ;;
+    --codex-rotate-config-path) codex_rotate_config_path="$2"; shift 2 ;;
+    --codex-rotate-fallback-file) codex_rotate_fallback_file="$2"; shift 2 ;;
     --codex-rotate-interval) codex_rotate_interval="$2"; shift 2 ;;
     --codex-rotate-min-balance) codex_rotate_min_balance="$2"; shift 2 ;;
+    --codex-rotate-no-warmup) codex_rotate_extra_args+=("--no-warmup"); shift ;;
+    --codex-rotate-exclude-current) codex_rotate_extra_args+=("--exclude-current"); shift ;;
+    --codex-rotate-force-fallback) codex_rotate_extra_args+=("--force-fallback"); shift ;;
     -h|--help) sed -n '1,140p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -129,6 +141,14 @@ toml_array_line() {
   done
   if [[ -n "$line" ]]; then
     printf '%s = [%s]' "$key" "$line"
+  fi
+}
+
+toml_string_line() {
+  local key="$1"
+  local value="$2"
+  if [[ -n "$value" ]]; then
+    printf '%s = "%s"' "$key" "$(toml_escape "$value")"
   fi
 }
 
@@ -201,6 +221,13 @@ for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh
   cp "$install_root/scripts/$script_name" "$workspace_path/scripts/$script_name"
   chmod +x "$workspace_path/scripts/$script_name"
 done
+if [[ "$enable_family_memory" -eq 1 ]]; then
+  for script_name in family-memory-capture.py family-memory-capture.ps1 cc-connect-memory-hook.sh test-family-memory.ps1 test-family-memory-hook.ps1; do
+    cp "$install_root/scripts/$script_name" "$workspace_path/scripts/$script_name"
+  done
+  chmod +x "$workspace_path/scripts/cc-connect-memory-hook.sh" "$workspace_path/scripts/family-memory-capture.py" 2>/dev/null || true
+  mkdir -p "$workspace_path/memory/messages" "$workspace_path/memory/people" "$workspace_path/memory/family" "$workspace_path/memory/summaries"
+fi
 chmod +x "$install_root/scripts/codex-balance-rotate.py" 2>/dev/null || true
 
 instructions="$(<"$install_root/templates/INSTRUCTIONS.md")"
@@ -231,6 +258,20 @@ if [[ -n "$admin_open_id" && "$admin_open_id" != "*" ]]; then
   group_admin_line="admin_from = \"$(toml_escape "$admin_open_id")\""
 fi
 mini_ignore_bot_mentions_line="$(toml_array_line "ignore_bot_mentions" "$mini_ignore_bot_mentions")"
+deep_instant_ack_line="$(toml_string_line "instant_ack_text" "$deep_instant_ack_text")"
+family_memory_hook_block=""
+if [[ "$enable_family_memory" -eq 1 ]]; then
+  family_memory_projects="$(toml_escape "${mini_project},${deep_project}")"
+  family_memory_hook_block="$(cat <<EOF
+[[hooks]]
+event = "message.received"
+type = "command"
+command = "FAMILY_MEMORY_WORKSPACE=\"$(toml_escape "$workspace_path")\" FAMILY_MEMORY_PROJECTS=\"${family_memory_projects}\" bash \"$(toml_escape "$workspace_path")/scripts/cc-connect-memory-hook.sh\""
+async = true
+timeout = 8
+EOF
+)"
+fi
 
 config="$(<"$install_root/templates/config.double-bot.linux.toml")"
 config="$(replace_token "$config" "__INSTALL_ROOT__" "$(toml_escape "$install_root")")"
@@ -245,6 +286,8 @@ config="$(replace_token "$config" "__DEEP_MODEL__" "$(toml_escape "$deep_model")
 config="$(replace_token "$config" "__DEEP_EFFORT__" "$(toml_escape "$deep_effort")")"
 config="$(replace_token "$config" "__GROUP_ADMIN_LINE__" "$group_admin_line")"
 config="$(replace_token "$config" "__MINI_IGNORE_BOT_MENTIONS_LINE__" "$mini_ignore_bot_mentions_line")"
+config="$(replace_token "$config" "__DEEP_INSTANT_ACK_LINE__" "$deep_instant_ack_line")"
+config="$(replace_token "$config" "__FAMILY_MEMORY_HOOK_BLOCK__" "$family_memory_hook_block")"
 config="$(replace_token "$config" "__MINI_APP_ID__" "$(toml_escape "$mini_app_id")")"
 config="$(replace_token "$config" "__MINI_APP_SECRET__" "$(toml_escape "$mini_app_secret")")"
 config="$(replace_token "$config" "__DEEP_APP_ID__" "$(toml_escape "$deep_app_id")")"
@@ -285,7 +328,13 @@ EOF
     if [[ "$enable_codex_balance_rotate" -eq 1 ]]; then
       rotate_service_path="${service_dir}/${codex_rotate_service_name}.service"
       rotate_timer_path="${service_dir}/${codex_rotate_service_name}.timer"
-      mkdir -p "$(dirname "$codex_rotate_env_path")" "$(dirname "$codex_rotate_auth_path")"
+      mkdir -p "$(dirname "$codex_rotate_env_path")" "$(dirname "$codex_rotate_auth_path")" "$(dirname "$codex_rotate_config_path")" "$(dirname "$codex_rotate_fallback_file")"
+      codex_rotate_extra=""
+      if [[ "${#codex_rotate_extra_args[@]}" -gt 0 ]]; then
+        for arg in "${codex_rotate_extra_args[@]}"; do
+          codex_rotate_extra+=" ${arg}"
+        done
+      fi
       cat >"$rotate_service_path" <<EOF
 [Unit]
 Description=codex-feishu Codex API balance rotation
@@ -294,7 +343,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env python3 "$(systemd_escape "$install_root")/scripts/codex-balance-rotate.py" --db "$(systemd_escape "$codex_rotate_db_path")" --env "$(systemd_escape "$codex_rotate_env_path")" --auth "$(systemd_escape "$codex_rotate_auth_path")" --min-balance ${codex_rotate_min_balance}
+ExecStart=/usr/bin/env python3 "$(systemd_escape "$install_root")/scripts/codex-balance-rotate.py" --db "$(systemd_escape "$codex_rotate_db_path")" --env "$(systemd_escape "$codex_rotate_env_path")" --auth "$(systemd_escape "$codex_rotate_auth_path")" --codex-config "$(systemd_escape "$codex_rotate_config_path")" --fallback-file "$(systemd_escape "$codex_rotate_fallback_file")" --min-balance ${codex_rotate_min_balance}${codex_rotate_extra}
 EOF
       cat >"$rotate_timer_path" <<EOF
 [Unit]

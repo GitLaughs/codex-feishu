@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$InstallRoot = (Split-Path -Parent $PSScriptRoot),
     [string]$ConfigPath = (Join-Path $env:USERPROFILE ".cc-connect\config.toml"),
     [string]$WorkspacePath = "",
@@ -14,6 +14,7 @@ param(
     [string]$MiniTriggerThreshold = "",
     [string]$DeepModel = "",
     [string]$DeepEffort = "",
+    [string]$DeepInstantAckText = "收到正在输出，请等等我。",
     [string]$DreamModel = "",
     [string]$DreamEffort = "",
     [string]$CodexMode = "",
@@ -21,6 +22,7 @@ param(
     [string]$MiniAppSecret = "",
     [string]$DeepAppId = "",
     [string]$DeepAppSecret = "",
+    [switch]$EnableFamilyMemory,
     [switch]$NoScheduledTasks
 )
 
@@ -87,6 +89,17 @@ function Convert-ToTomlArrayLine {
     return "$Key = [$($items -join ", ")]"
 }
 
+function Convert-ToTomlStringLine {
+    param(
+        [string]$Key,
+        [string]$Value
+    )
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+    return "$Key = `"$((Convert-ToTomlLiteral $Value))`""
+}
+
 function Write-Utf8File {
     param(
         [string]$Path,
@@ -117,6 +130,7 @@ $miniIgnoreBotMentions = $MiniIgnoreBotMentions
 $miniTriggerThreshold = if ($MiniTriggerThreshold) { $MiniTriggerThreshold } else { Read-Value -Prompt "Mini reply trigger threshold (relaxed/medium/strict)" -Default "strict" -Required }
 $deepModel = if ($DeepModel) { $DeepModel } else { Read-Value -Prompt "Deep model" -Default "gpt-5.5" -Required }
 $deepEffort = if ($DeepEffort) { $DeepEffort } else { Read-Value -Prompt "Deep reasoning effort" -Default "high" -Required }
+$deepInstantAckText = $DeepInstantAckText
 $dreamModel = if ($DreamModel) { $DreamModel } else { Read-Value -Prompt "Dream command model" -Default $deepModel -Required }
 $dreamEffort = if ($DreamEffort) { $DreamEffort } else { Read-Value -Prompt "Dream command reasoning effort" -Default "xhigh" -Required }
 $codexMode = if ($CodexMode) { $CodexMode } else { Read-Value -Prompt "Codex mode" -Default "yolo" -Required }
@@ -168,9 +182,31 @@ if (![string]::IsNullOrWhiteSpace($adminOpenId) -and $adminOpenId -ne "*") {
     $groupAdminLine = "admin_from = `"$adminOpenId`""
 }
 $miniIgnoreBotMentionsLine = Convert-ToTomlArrayLine -Key "ignore_bot_mentions" -Csv $miniIgnoreBotMentions
+$deepInstantAckLine = Convert-ToTomlStringLine -Key "instant_ack_text" -Value $deepInstantAckText
+$familyMemoryHookBlock = ""
+if ($EnableFamilyMemory) {
+    $projects = "$miniProject,$deepProject"
+    $hookCommand = Convert-ToTomlLiteral "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$workspaceFwd/scripts/cc-connect-memory-hook.ps1`" -Workspace `"$WorkspacePath`" -Projects `"$projects`""
+    $familyMemoryHookBlock = @"
+[[hooks]]
+event = "message.received"
+type = "command"
+command = "$hookCommand"
+async = true
+timeout = 8
+"@
+}
 
 foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1") {
     Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\$scriptName") -Force
+}
+if ($EnableFamilyMemory) {
+    foreach ($scriptName in "family-memory-capture.ps1","family-memory-capture.py","cc-connect-memory-hook.ps1","test-family-memory.ps1","test-family-memory-hook.ps1") {
+        Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\$scriptName") -Force
+    }
+    foreach ($folder in "memory\messages","memory\people","memory\family","memory\summaries") {
+        New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath $folder) | Out-Null
+    }
 }
 
 $instructionsTemplate = Get-Content -LiteralPath (Join-Path $InstallRoot "templates\INSTRUCTIONS.md") -Raw
@@ -199,24 +235,6 @@ Write-Utf8File -Path (Join-Path $WorkspacePath "scripts\dream_prompt.md") -Conte
 $helpGuideTemplate = Get-Content -LiteralPath (Join-Path $InstallRoot "templates\help-guide.md") -Raw
 Write-Utf8File -Path (Join-Path $WorkspacePath "local_files\docs\help-guide.md") -Content $helpGuideTemplate
 
-$ackScript = Join-Path $InstallRoot "scripts\cc-connect-ack.ps1"
-$ackVbsPath = Join-Path $InstallRoot "scripts\cc-connect-ack-hidden.vbs"
-$ackArgs = @(
-    "-NoProfile",
-    "-ExecutionPolicy Bypass",
-    "-WindowStyle Hidden",
-    "-File `"$ackScript`"",
-    "-MiniProject `"$miniProject`"",
-    "-DeepProject `"$deepProject`"",
-    "-DeepMentionPattern `"(@_user_|$([Regex]::Escape($deepProject)))`""
-) -join " "
-$ackVbs = @"
-Set shell = CreateObject("WScript.Shell")
-cmd = "powershell.exe $ackArgs"
-shell.Run cmd, 0, False
-"@
-Write-Utf8File -Path $ackVbsPath -Content $ackVbs
-
 $startupVbsPath = Join-Path $InstallRoot "cc-connect-startup-hidden.vbs"
 $watchScript = Join-Path $InstallRoot "scripts\watch-cc-connect.ps1"
 $watchLog = Join-Path $InstallRoot "cc-connect-watchdog.log"
@@ -243,6 +261,8 @@ $config = $template.
     Replace("__DEEP_EFFORT__", $deepEffort).
     Replace("__GROUP_ADMIN_LINE__", $groupAdminLine).
     Replace("__MINI_IGNORE_BOT_MENTIONS_LINE__", $miniIgnoreBotMentionsLine).
+    Replace("__DEEP_INSTANT_ACK_LINE__", $deepInstantAckLine).
+    Replace("__FAMILY_MEMORY_HOOK_BLOCK__", $familyMemoryHookBlock).
     Replace("__MINI_APP_ID__", $miniAppId).
     Replace("__MINI_APP_SECRET__", (Convert-ToTomlLiteral $miniAppSecret)).
     Replace("__DEEP_APP_ID__", $deepAppId).

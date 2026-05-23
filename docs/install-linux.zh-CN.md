@@ -7,7 +7,8 @@
 - 你想把 `cc-connect` 长期跑在 Linux 主机上。
 - 你希望用 systemd user service 后台运行。
 - 你仍然需要和 Windows 版相同的双机器人流程：mini 全量监听、deep 只处理 @、回复链隔离、`/help`、`/dream`、文件归档和健康检查。
-- 你可以选择接入 cc-switch 的 opentoken 余额轮询，让 Codex 新会话默认使用当前余额最高的可用 API。
+- 你可以选择接入 cc-switch 的 provider 余额轮询，让 Codex 新会话默认使用当前余额最高的可用 API。
+- 你可以选择启用家庭记忆捕获，把明确的记忆、待办、购物消息写入本地工作区。
 
 ## 安装依赖
 
@@ -62,6 +63,7 @@ bash ./scripts/install-linux.sh \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
+  --deep-instant-ack-text "收到正在输出，请等等我。" \
   --dream-model "gpt-5.5" \
   --dream-effort "xhigh" \
   --codex-mode "yolo" \
@@ -69,7 +71,8 @@ bash ./scripts/install-linux.sh \
   --mini-app-id "cli_xxx" \
   --mini-app-secret "..." \
   --deep-app-id "cli_yyy" \
-  --deep-app-secret "..."
+  --deep-app-secret "..." \
+  --enable-family-memory
 ```
 
 只生成配置，不注册 systemd：
@@ -80,7 +83,7 @@ bash ./scripts/install-linux.sh --no-systemd
 
 ## Codex API 余额轮询
 
-如果服务器上安装了 cc-switch，并且多个 Codex opentoken provider 已在 cc-switch 中配置，可开启轮询：
+如果服务器上安装了 cc-switch，并且多个兼容 OpenAI API 的 Codex provider 已在 cc-switch 中配置，可开启轮询：
 
 ```bash
 bash ./scripts/install-linux.sh \
@@ -96,10 +99,24 @@ bash ./scripts/install-linux.sh \
 ~/.config/systemd/user/codex-feishu-codex-balance-rotate.timer
 ```
 
-默认每 30 分钟运行一次，读取 cc-switch 数据库中的 Codex provider，过滤 `otokapi.com`，调用 `/v1/usage` 查询余额，并把余额最高的有效 key 写入：
+默认每 30 分钟运行一次，读取 cc-switch 数据库中的 Codex provider，调用 `/v1/usage` 查询余额，并把余额最高的有效 key 写入：
 
 - `--codex-rotate-env-path`，默认是仓库目录下的 `codex.env`
 - `--codex-rotate-auth-path`，默认是 `$HOME/.codex/auth.json`
+- `--codex-rotate-config-path`，默认是 `$HOME/.codex/config.toml`
+- `--codex-rotate-fallback-file`，默认是 `$HOME/.cc-switch/codex-fallback-providers.json`
+
+warmup 默认先请求 Responses API；如果 provider 返回不支持 Responses，会自动改用 chat completions 做 warmup，再查询 `/v1/usage`。也可以在 fallback 文件里显式写：
+
+```json
+{
+  "name": "backup-provider",
+  "base_url": "https://example.invalid/v1",
+  "key": "sk-...",
+  "model": "gpt-5.5",
+  "warmup_api": "chat"
+}
+```
 
 可调整频率：
 
@@ -110,6 +127,25 @@ bash ./scripts/install-linux.sh \
 ```
 
 这套逻辑不做单条消息失败后的自动重试。如果某次回答因为余额或上游错误失败，让用户重新发送即可。
+
+## 家庭记忆捕获
+
+开启方式：
+
+```bash
+bash ./scripts/install-linux.sh --enable-family-memory
+```
+
+安装器会复制 `family-memory-capture.py`、`cc-connect-memory-hook.sh` 和测试脚本，并创建：
+
+```text
+memory/messages
+memory/people
+memory/family
+memory/summaries
+```
+
+这个 hook 只记录显式记忆类消息，不负责即时“收到”回复。deep 的即时回复由 `instant_ack_text` 字段处理。
 
 ## systemd user service
 
@@ -152,6 +188,7 @@ Linux 安装器会生成：
 - `INSTRUCTIONS.md`
 - `local_files/`
 - `memory/`
+  - 如果启用家庭记忆，还会生成 `memory/messages`、`memory/people`、`memory/family`、`memory/summaries`
 - `local_files/docs/help-guide.md`
 - `scripts/dream_prompt.md`
 - Linux 版 helper scripts：

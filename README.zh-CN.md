@@ -41,8 +41,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - `/help` 静态帮助和 `/dream` 工作区整理命令。
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
-- Linux 可选安装 Codex API 余额轮询：从 cc-switch 的 opentoken 账号里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
+- Linux 可选安装 Codex API 余额轮询：从 cc-switch 中兼容 OpenAI API 的 provider 里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
 - deep 收到 @ 后立即发独立 `收到正在输出，请等等我。`，随后继续处理最终结果；mini 只有决定处理普通消息时才发同样的提示。
+- 可选家庭记忆捕获：把明确的“记住 / 待办 / 购物 / 查记忆”消息写到工作区本地 `memory` 文件。
 - 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
 - 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
 
@@ -129,7 +130,6 @@ bash ./scripts/install-linux.sh
 - `~\.cc-connect\config.toml`
 - 本地群聊工作区
 - `AGENTS.md`、`INSTRUCTIONS.md`、`help-guide.md`、`dream_prompt.md`
-- 隐藏式 `收到` hook wrapper
 - Windows 计划任务和 watchdog
 
 ## 非交互安装
@@ -203,7 +203,39 @@ bash ./scripts/install-linux.sh \
   --codex-rotate-auth-path "$HOME/.codex/auth.json"
 ```
 
-轮询脚本只负责选择当前余额最高且 `/v1/usage` 可用的 opentoken provider，并写入 Codex auth。它不做单条消息失败后的自动重试；如果一次回答撞上余额或服务错误，用户重新发送即可使用下一次轮询/切换后的 key。
+轮询脚本只负责选择当前余额最高且 `/v1/usage` 可用的 cc-switch provider，并写入 Codex auth。provider 不固定为某个服务名，只要兼容预期的 OpenAI API usage 返回即可。warmup 默认先试 Responses API；如果 provider 明确不支持 Responses，会自动改用 chat completions warmup。它不做单条消息失败后的自动重试；如果一次回答撞上余额或服务错误，用户重新发送即可使用下一次轮询/切换后的 key。
+
+## 可选家庭记忆
+
+如果这个群是家庭群或需要长期轻量记忆，可以在安装时开启：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -EnableFamilyMemory
+```
+
+Linux 对应参数：
+
+```bash
+bash ./scripts/install-linux.sh --enable-family-memory
+```
+
+开启后安装器会复制 `family-memory-capture.*` 和 `cc-connect-memory-hook.*`，并创建：
+
+```text
+memory/messages
+memory/people
+memory/family
+memory/summaries
+```
+
+这个 hook 只做本地记忆捕获，不负责“收到”即时回复。deep 的即时回复由 `instant_ack_text` 平台字段处理。支持的显式消息包括：
+
+- `记住：妈妈不太吃辣`
+- `忘掉：某条旧记忆`
+- `待办：周末检查空调滤网`
+- `购物：牛奶、鸡蛋`
+- `你记得什么`
 
 ## mini 回复阈值
 
@@ -271,6 +303,10 @@ Get-Content .\cc-connect-run.log -Tail 80
     watch-cc-connect.ps1
     cc-connect-ack.ps1
     cc-connect-ack.sh
+    cc-connect-memory-hook.ps1
+    cc-connect-memory-hook.sh
+    family-memory-capture.ps1
+    family-memory-capture.py
     help.ps1
     dream.ps1
     import-local-file.ps1

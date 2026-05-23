@@ -10,6 +10,7 @@
 - deep bot：只处理 @，用 `gpt-5.5` 处理复杂任务。
 - `/help`：直接返回静态群聊使用指南，不进入模型推理。
 - `/dream`：用 deep 模型整理本地工作区、知识库和文件索引。
+- 可选家庭记忆：把明确的“记住 / 待办 / 购物 / 查记忆”消息写入本地工作区。
 
 普通群消息、文件和项目上下文不会丢；真正复杂的任务可以直接 @ deep bot。
 
@@ -116,6 +117,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
+  -DeepInstantAckText "收到正在输出，请等等我。" `
   -DreamModel "gpt-5.5" `
   -DreamEffort "xhigh" `
   -CodexMode "yolo" `
@@ -123,7 +125,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -MiniAppId "cli_xxx" `
   -MiniAppSecret "填你的 mini secret" `
   -DeepAppId "cli_yyy" `
-  -DeepAppSecret "填你的 deep secret"
+  -DeepAppSecret "填你的 deep secret" `
+  -EnableFamilyMemory
 ```
 
 安装脚本会：
@@ -134,7 +137,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 - 生成 `AGENTS.md`、`INSTRUCTIONS.md`、`KNOWLEDGE.md`、`memory` 和 `local_files` 目录。
 - 生成 `/help` 指南和 `/dream` 维护提示词。
 - 复制文件归档、飞书资源下载、事件监听和健康检查脚本。
-- 创建隐藏式 `收到` hook wrapper。
+- 如果启用 `-EnableFamilyMemory`，复制家庭记忆脚本并创建 `memory/messages`、`memory/people`、`memory/family`、`memory/summaries`。
 - 注册 Windows 计划任务启动 `cc-connect`。
 - 注册 watchdog，定期检查并拉起 `cc-connect`。
 
@@ -201,7 +204,7 @@ Get-ScheduledTask -TaskName codex-feishu-cc-connect,codex-feishu-watchdog
 - 闲聊默认不回复，也不会收到 `收到`。
 - 文件会被保存和索引到本地工作区。
 - @ 消息进入 deep project。
-- @ 消息由 deep hook 立即回复 `收到正在输出，请等等我。`。
+- @ 消息由 deep 平台路由立即回复 `收到正在输出，请等等我。`。
 - 不同 root @ 消息会形成不同任务会话。
 - 飞书回复链会继续对应任务。
 
@@ -264,15 +267,34 @@ ignore_bot_mentions = ["codex-deep", "ou_deep_bot_open_id"]
 
 这样 deep bot 被 @ 后，mini 会跳过根消息和同话题后续回复，不再重复处理。
 
-### 每条消息都会弹出终端窗口
+### deep 没有立即回复“收到”
 
-重新运行安装脚本，确保 hook 使用隐藏 VBS wrapper。
+即时“收到”现在走 Feishu platform 的 `instant_ack_text` 字段，不再依赖 `message.received` 命令 hook。
 
 配置里应类似：
 
 ```toml
-command = "wscript.exe //B //Nologo \"E:/codex-feishu/scripts/cc-connect-ack-hidden.vbs\""
+instant_ack_text = "收到正在输出，请等等我。"
 ```
+
+如果配置正确但仍无立即回复，确认当前 `cc-connect` 运行时支持 `instant_ack_text`，并重启服务或计划任务。
+
+### 家庭记忆没有写入
+
+确认安装时启用了：
+
+```powershell
+-EnableFamilyMemory
+```
+
+配置里应有 `cc-connect-memory-hook.ps1`，工作区应有：
+
+```powershell
+Test-Path .\scripts\family-memory-capture.ps1
+Test-Path .\memory\family
+```
+
+家庭记忆 hook 只处理显式记忆类消息，例如 `记住：...`、`待办：...`、`购物：...`。它不负责即时“收到”回复。
 
 ### 流式预览没有出现
 

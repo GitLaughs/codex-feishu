@@ -57,15 +57,17 @@ Linux installer:
 This prevents the all-message mini bot from handling the root @ message and
 later replies in that Feishu topic.
 
-## Windows Terminal Opens on Every Message
+## Deep Bot Does Not Send Immediate Acknowledgement
 
-The hook should call the hidden VBS wrapper:
+Immediate acknowledgement should be configured on the Feishu platform route:
 
 ```toml
-command = "wscript.exe //B //Nologo \"E:/codex-feishu/scripts/cc-connect-ack-hidden.vbs\""
+instant_ack_text = "收到正在输出，请等等我。"
 ```
 
-Re-run the installer or update the hook command manually.
+Re-run the installer or update the generated deep project platform options.
+If the field is present but no immediate message appears, confirm the installed
+`cc-connect` runtime supports `instant_ack_text`, then restart the runner.
 
 ## Multiple cc-connect Processes Are Running
 
@@ -122,15 +124,40 @@ Test-Path .\local_files\docs\help-guide.md
 `/dream` also requires the `codex` CLI to be available in the scheduled task
 environment.
 
+## Family Memory Does Not Write Files
+
+Family memory capture is opt-in:
+
+```powershell
+-EnableFamilyMemory
+```
+
+Linux:
+
+```bash
+--enable-family-memory
+```
+
+The generated config should contain `cc-connect-memory-hook.ps1` on Windows or
+`cc-connect-memory-hook.sh` on Linux. The workspace should contain:
+
+```text
+memory/messages
+memory/people
+memory/family
+memory/summaries
+```
+
+The hook only records explicit memory commands such as `记住：...`, `待办：...`,
+`购物：...`, and `你记得什么`. It does not send immediate acknowledgements.
+
 ## Mini Bot Says Acknowledgement Too Often
 
-By default the hook only auto-acknowledges the deep project. The mini project
-should send `收到正在输出，请等等我。` itself only after it decides a normal group message is worth
-handling.
+The mini project should send `收到正在输出，请等等我。` itself only after it decides a normal group message is worth handling.
 
-If mini is acknowledging every message, check whether the hook was generated
-with `-AckMiniAllMessages` or whether custom instructions are telling mini to
-ack casual chat.
+If mini is acknowledging every message, check whether custom instructions are
+telling mini to ack casual chat, or whether an old legacy ack hook is still
+present in your local config.
 
 ## Linux systemd Service Does Not Start
 
