@@ -7,6 +7,13 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+### Added
+
+- Added `docs/product-iteration-plan.md` with a P0-P3 codex-feishu hardening roadmap.
+- Added `docs/optimization-report-2026-05-23.md` with current server status and next operational priorities.
+- Added `scripts/audit-secrets.ps1` for pre-release secret scanning.
+- Added `scripts/codex-feishu-healthcheck.sh` for server-side systemd, project-count, resource, and recent-error checks.
+
 ## [0.6.0] - 2026-05-23
 
 ### Added

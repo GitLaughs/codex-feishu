@@ -344,6 +344,8 @@ Expected:
 - [Feishu console setup](docs/feishu-console.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Release checklist](docs/release-checklist.md)
+- [Product iteration plan](docs/product-iteration-plan.md)
+- [Optimization report 2026-05-23](docs/optimization-report-2026-05-23.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

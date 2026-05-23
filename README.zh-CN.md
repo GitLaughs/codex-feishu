@@ -360,6 +360,8 @@ Get-Content .\cc-connect-run.log -Tail 80
 本项目是 [`cc-connect`](https://github.com/chenhg5/cc-connect) 的部署与配置层。
 `cc-connect` 提供飞书/Lark 接入、hook、流式预览、会话管理和平台桥接能力。
 
+产品化迭代方案见 [docs/product-iteration-plan.md](docs/product-iteration-plan.md)，当前优化简报见 [docs/optimization-report-2026-05-23.md](docs/optimization-report-2026-05-23.md)。
+
 许可证和第三方说明见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## License
