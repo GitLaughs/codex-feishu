@@ -8,6 +8,7 @@ Dual-bot Feishu/Lark group routing for Codex through `cc-connect`.
 
 - a fast mini bot monitors all group messages and decides whether to speak;
 - the mini bot uses a configurable reply trigger threshold to avoid casual chatter;
+- the mini bot can be configured to ignore deep bot mentions and their topic replies;
 - a deep bot handles direct @ tasks with a stronger model;
 - Feishu reply chains become isolated task sessions;
 - `/help` and `/dream` provide static help and workspace maintenance without normal chat routing;
@@ -50,6 +51,7 @@ flowchart LR
 ## Features
 
 - Dual Feishu app routing: one all-message monitor, one @-only deep bot.
+- Optional `ignore_bot_mentions` route guard for patched `cc-connect` runtimes, so mini stays silent when a deep bot is @mentioned in a Feishu topic/reply chain.
 - Configurable `gpt-5.4-mini` reply trigger threshold: `relaxed`, `medium`, or `strict`.
 - Parallel task sessions through `thread_isolation = true`.
 - Feishu reply continuation through `reply_to_trigger = true`.
@@ -143,6 +145,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -AdminOpenId "*" `
   -MiniModel "gpt-5.4-mini" `
   -MiniEffort "medium" `
+  -MiniIgnoreBotMentions "feishu-deep,ou_deep_bot_open_id" `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
@@ -179,6 +182,7 @@ bash ./scripts/install-linux.sh \
   --admin-open-id "*" \
   --mini-model "gpt-5.4-mini" \
   --mini-effort "medium" \
+  --mini-ignore-bot-mentions "feishu-deep,ou_deep_bot_open_id" \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
@@ -216,6 +220,10 @@ Deep task:
 3. deep model works directly, not through mini relay;
 4. stream preview updates the Feishu message during long output.
 5. long tasks should send a short progress update roughly once per minute.
+
+When your `cc-connect` runtime supports `ignore_bot_mentions`, pass the deep bot
+display name and/or open IDs to the mini installer option. This drops the root @
+message and later replies in the same Feishu topic before `gpt-5.4-mini` runs.
 
 Static commands:
 

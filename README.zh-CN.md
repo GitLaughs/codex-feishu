@@ -33,6 +33,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ## 核心能力
 
 - 双飞书应用路由：mini 全量监听，deep 只处理 @。
+- 可选 `ignore_bot_mentions` 路由保护：deep bot 被 @ 及其话题回复时，mini 静默不抢活。
 - `gpt-5.4-mini` 回复阈值：`relaxed`、`medium`、`strict`。
 - 飞书回复链隔离会话：不同人的不同任务可以并行处理。
 - @ 任务直接进入 deep bot，避免 mini 中转带来的误路由。
@@ -66,6 +67,7 @@ flowchart LR
 - 闲聊、简单附和、和项目无关的消息默认静默。
 - 文件、明确任务、项目相关问题会被处理。
 - 用户 @ deep bot 时，任务直接进入 deep bot。
+- 如果底层 `cc-connect` 支持 `ignore_bot_mentions`，mini 会在进入模型前丢弃 deep bot 的 @ 根消息和同话题后续回复。
 - 用户用飞书“回复”继续某条任务时，会回到对应会话。
 - `/help` 直接返回静态指南，不进入模型推理。
 - `/dream` 使用 deep 模型整理本地工作区知识、索引和记忆。
@@ -142,6 +144,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -AdminOpenId "*" `
   -MiniModel "gpt-5.4-mini" `
   -MiniEffort "medium" `
+  -MiniIgnoreBotMentions "feishu-deep,ou_deep_bot_open_id" `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
@@ -171,6 +174,7 @@ bash ./scripts/install-linux.sh \
   --admin-open-id "*" \
   --mini-model "gpt-5.4-mini" \
   --mini-effort "medium" \
+  --mini-ignore-bot-mentions "feishu-deep,ou_deep_bot_open_id" \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
@@ -210,6 +214,28 @@ bash ./scripts/install-linux.sh \
 - `strict`：默认值。只有明确叫机器人、明确分配任务、需要处理文件，或不处理会丢失重要项目上下文时才回复。
 
 注意：这个阈值写入生成的 `INSTRUCTIONS.md`，由 Codex 项目按规则执行；它不是 `cc-connect` 的底层协议字段。
+
+## deep @ 路由保护
+
+如果你的 `cc-connect` 运行时支持 `ignore_bot_mentions`，建议把 deep bot 的显示名和 open_id 写进 mini 配置：
+
+```powershell
+-MiniIgnoreBotMentions "feishu-deep,ou_deep_bot_open_id"
+```
+
+Linux 对应参数：
+
+```bash
+--mini-ignore-bot-mentions "feishu-deep,ou_deep_bot_open_id"
+```
+
+安装器会在 mini 的 Feishu platform options 中生成：
+
+```toml
+ignore_bot_mentions = ["feishu-deep", "ou_deep_bot_open_id"]
+```
+
+这会让 mini 在全量监听模式下跳过 deep bot 的 @ 根消息，并记住对应飞书话题/回复链，后续同话题回复也不再进入 `gpt-5.4-mini`。
 
 ## 验证
 

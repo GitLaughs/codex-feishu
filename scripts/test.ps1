@@ -131,6 +131,7 @@ try {
         -AdminOpenId "*" `
         -MiniModel "gpt-5.4-mini" `
         -MiniEffort "medium" `
+        -MiniIgnoreBotMentions "feishu-deep,ou_deep" `
         -MiniTriggerThreshold "strict" `
         -DeepModel "gpt-5.5" `
         -DeepEffort "high" `
@@ -153,6 +154,9 @@ try {
         }
         if ($config -match 'admin_from = "\*"') {
             Add-Failure "Install smoke should not grant wildcard group admin privileges."
+        }
+        if ($config -notmatch 'ignore_bot_mentions = \["feishu-deep", "ou_deep"\]') {
+            Add-Failure "Install smoke did not generate mini ignored bot mention routing guard."
         }
     }
     $instructionsPath = Join-Path $workspace "INSTRUCTIONS.md"
@@ -189,12 +193,13 @@ if ($bashUsable) {
         "cd $(Quote-Bash $rootBash)",
         "rm -rf $(Quote-Bash $linuxTmpBash)",
         "mkdir -p $(Quote-Bash $linuxTmpBash)",
-        "bash scripts/install-linux.sh --install-root $(Quote-Bash $rootBash) --config-path $(Quote-Bash "$linuxTmpBash/config.toml") --workspace-path $(Quote-Bash "$linuxTmpBash/workspace") --group-chat-id oc_test --mini-project feishu-mini --deep-project feishu-deep --admin-open-id '*' --mini-model gpt-5.4-mini --mini-effort medium --mini-trigger-threshold strict --deep-model gpt-5.5 --deep-effort high --dream-model gpt-5.5 --dream-effort xhigh --codex-mode yolo --mini-app-id cli_mini --mini-app-secret fake-mini-secret --deep-app-id cli_deep --deep-app-secret fake-deep-secret --no-systemd >/dev/null",
+        "bash scripts/install-linux.sh --install-root $(Quote-Bash $rootBash) --config-path $(Quote-Bash "$linuxTmpBash/config.toml") --workspace-path $(Quote-Bash "$linuxTmpBash/workspace") --group-chat-id oc_test --mini-project feishu-mini --deep-project feishu-deep --admin-open-id '*' --mini-model gpt-5.4-mini --mini-effort medium --mini-ignore-bot-mentions feishu-deep,ou_deep --mini-trigger-threshold strict --deep-model gpt-5.5 --deep-effort high --dream-model gpt-5.5 --dream-effort xhigh --codex-mode yolo --mini-app-id cli_mini --mini-app-secret fake-mini-secret --deep-app-id cli_deep --deep-app-secret fake-deep-secret --no-systemd >/dev/null",
         "test -f $(Quote-Bash "$linuxTmpBash/config.toml")",
         "grep -q 'name = `"help`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
         "grep -q 'name = `"dream`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
         "grep -q 'disabled_commands = \[`"dir`", `"shell`", `"restart`", `"upgrade`", `"cron`", `"commands`", `"provider`"\]' $(Quote-Bash "$linuxTmpBash/config.toml")",
         "! grep -q 'admin_from = `"\\*`"' $(Quote-Bash "$linuxTmpBash/config.toml")",
+        "grep -q 'ignore_bot_mentions = \[`"feishu-deep`", `"ou_deep`"\]' $(Quote-Bash "$linuxTmpBash/config.toml")",
         "test -f $(Quote-Bash "$linuxTmpBash/workspace/AGENTS.md")",
         "test -f $(Quote-Bash "$linuxTmpBash/workspace/scripts/dream_prompt.md")",
         "test -f $(Quote-Bash "$linuxTmpBash/workspace/local_files/docs/help-guide.md")",

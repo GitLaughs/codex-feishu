@@ -1,40 +1,45 @@
-# codex-feishu v0.3.0
+# codex-feishu v0.4.0
 
-Adds optional Codex API balance rotation for Linux deployments that use cc-switch opentoken providers.
+Adds an optional Feishu mention/topic route guard so an all-message mini bot can
+stay silent when the deep bot is @mentioned.
 
 ## Highlights
 
-- New `scripts/codex-balance-rotate.py` checks cc-switch Codex providers, queries `/v1/usage`, and selects the provider with the highest positive remaining balance.
-- Linux installer can now register a systemd user timer with `--enable-codex-balance-rotate`.
-- The timer defaults to every 30 minutes and writes the selected key to Codex auth for future sessions.
-- The rotation is intentionally not an in-flight retry layer. If a chat request fails because an API is exhausted or temporarily unavailable, users should resend after the key has switched.
+- Windows installer now accepts `-MiniIgnoreBotMentions`.
+- Linux installer now accepts `--mini-ignore-bot-mentions`.
+- The generated mini Feishu platform config can include `ignore_bot_mentions = [...]`.
+- In patched `cc-connect` runtimes that support this field, mini drops the root deep @ message and later replies in the same Feishu topic before `gpt-5.4-mini` runs.
 
 ## Install
 
-Linux balance rotation example:
+Windows example:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -MiniIgnoreBotMentions "feishu-deep,ou_deep_bot_open_id"
+```
+
+Linux example:
 
 ```bash
 bash ./scripts/install-linux.sh \
-  --enable-codex-balance-rotate \
-  --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
-  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+  --mini-ignore-bot-mentions "feishu-deep,ou_deep_bot_open_id"
 ```
 
-Normal Windows and Linux dual-bot installation remains unchanged.
+Leave the option empty for stock runtimes that do not understand this patched
+platform field.
 
 ## Verify
 
-```bash
-systemctl --user status codex-feishu-codex-balance-rotate.timer
-journalctl --user -u codex-feishu-codex-balance-rotate.service -n 80
-python3 scripts/codex-balance-rotate.py --dry-run
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
 Expected:
 
-- opentoken providers are listed with remaining balances;
-- the highest-balance valid provider is selected;
-- no API keys are printed.
+- generated config contains `ignore_bot_mentions` when the installer option is provided;
+- normal dual-bot installs still work when the option is omitted;
+- PowerShell parser, secret scan, and install smoke checks pass.
 
 ## Attribution
 

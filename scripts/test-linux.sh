@@ -54,6 +54,7 @@ bash "$root/scripts/install-linux.sh" \
   --admin-open-id "*" \
   --mini-model "gpt-5.4-mini" \
   --mini-effort "medium" \
+  --mini-ignore-bot-mentions "feishu-deep,ou_deep" \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
@@ -73,6 +74,7 @@ grep -q 'disabled_commands = \["dir", "shell", "restart", "upgrade", "cron", "co
 if grep -q 'admin_from = "\*"' "$tmp/config.toml"; then
   add_failure "Linux install should not grant wildcard group admin privileges."
 fi
+grep -q 'ignore_bot_mentions = \["feishu-deep", "ou_deep"\]' "$tmp/config.toml" || add_failure "Linux install did not generate mini ignored bot mention routing guard."
 [[ -f "$tmp/workspace/AGENTS.md" ]] || add_failure "Linux install did not generate AGENTS.md."
 [[ -f "$tmp/workspace/INSTRUCTIONS.md" ]] || add_failure "Linux install did not generate INSTRUCTIONS.md."
 [[ -f "$tmp/workspace/scripts/dream_prompt.md" ]] || add_failure "Linux install did not generate dream prompt."

@@ -42,6 +42,8 @@ Mini project:
 
 - Feishu app has group all-message permission.
 - cc-connect uses `group_reply_all = true`.
+- Optional patched-runtime guard uses `ignore_bot_mentions` to drop deep bot @
+  messages and later same-topic replies before the mini agent starts.
 - The `gpt-5.4-mini` project decides whether a reply is useful.
 - A configurable mini reply trigger threshold controls how conservative this
   decision should be: `relaxed`, `medium`, or `strict`.
@@ -57,6 +59,19 @@ Deep project:
 - cc-connect uses `group_reply_all = false`.
 - Only @ mentions wake the deep model.
 - Complex work stays in the deep bot's own thread/session.
+
+## Mention/Topic Guard
+
+In all-message mode, Feishu can deliver a root `@deep-bot` message to the mini
+app as a normal group event. A runtime that supports `ignore_bot_mentions` lets
+the mini platform discard those events before model routing:
+
+```toml
+ignore_bot_mentions = ["feishu-deep", "ou_deep_bot_open_id"]
+```
+
+The guard also remembers the root Feishu topic/reply chain, so follow-up replies
+under the deep task stay with the deep project instead of waking mini.
 
 ## Session Isolation
 

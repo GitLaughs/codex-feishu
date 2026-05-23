@@ -10,6 +10,7 @@ param(
     [string]$AdminOpenId = "",
     [string]$MiniModel = "",
     [string]$MiniEffort = "",
+    [string]$MiniIgnoreBotMentions = "",
     [string]$MiniTriggerThreshold = "",
     [string]$DeepModel = "",
     [string]$DeepEffort = "",
@@ -68,6 +69,24 @@ function Convert-ToForwardSlash {
     return $Path.Replace("\", "/")
 }
 
+function Convert-ToTomlArrayLine {
+    param(
+        [string]$Key,
+        [string]$Csv
+    )
+    if ([string]::IsNullOrWhiteSpace($Csv)) {
+        return ""
+    }
+    $items = $Csv -split "," |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { ![string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { '"' + (Convert-ToTomlLiteral $_) + '"' }
+    if (!$items -or $items.Count -eq 0) {
+        return ""
+    }
+    return "$Key = [$($items -join ", ")]"
+}
+
 function Write-Utf8File {
     param(
         [string]$Path,
@@ -94,6 +113,7 @@ $deepProject = if ($DeepProject) { $DeepProject } else { Read-Value -Prompt "Dee
 $adminOpenId = if ($AdminOpenId) { $AdminOpenId } else { Read-Value -Prompt "Admin open_id (optional; use * to allow configured platform users)" -Default "*" }
 $miniModel = if ($MiniModel) { $MiniModel } else { Read-Value -Prompt "Mini model" -Default "gpt-5.4-mini" -Required }
 $miniEffort = if ($MiniEffort) { $MiniEffort } else { Read-Value -Prompt "Mini reasoning effort" -Default "medium" -Required }
+$miniIgnoreBotMentions = $MiniIgnoreBotMentions
 $miniTriggerThreshold = if ($MiniTriggerThreshold) { $MiniTriggerThreshold } else { Read-Value -Prompt "Mini reply trigger threshold (relaxed/medium/strict)" -Default "strict" -Required }
 $deepModel = if ($DeepModel) { $DeepModel } else { Read-Value -Prompt "Deep model" -Default "gpt-5.5" -Required }
 $deepEffort = if ($DeepEffort) { $DeepEffort } else { Read-Value -Prompt "Deep reasoning effort" -Default "high" -Required }
@@ -147,6 +167,7 @@ $groupAdminLine = ""
 if (![string]::IsNullOrWhiteSpace($adminOpenId) -and $adminOpenId -ne "*") {
     $groupAdminLine = "admin_from = `"$adminOpenId`""
 }
+$miniIgnoreBotMentionsLine = Convert-ToTomlArrayLine -Key "ignore_bot_mentions" -Csv $miniIgnoreBotMentions
 
 foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1") {
     Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\$scriptName") -Force
@@ -221,6 +242,7 @@ $config = $template.
     Replace("__DEEP_MODEL__", $deepModel).
     Replace("__DEEP_EFFORT__", $deepEffort).
     Replace("__GROUP_ADMIN_LINE__", $groupAdminLine).
+    Replace("__MINI_IGNORE_BOT_MENTIONS_LINE__", $miniIgnoreBotMentionsLine).
     Replace("__MINI_APP_ID__", $miniAppId).
     Replace("__MINI_APP_SECRET__", (Convert-ToTomlLiteral $miniAppSecret)).
     Replace("__DEEP_APP_ID__", $deepAppId).

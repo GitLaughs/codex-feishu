@@ -58,6 +58,7 @@ bash ./scripts/install-linux.sh \
   --admin-open-id "*" \
   --mini-model "gpt-5.4-mini" \
   --mini-effort "medium" \
+  --mini-ignore-bot-mentions "feishu-deep,ou_deep_bot_open_id" \
   --mini-trigger-threshold "strict" \
   --deep-model "gpt-5.5" \
   --deep-effort "high" \
@@ -172,6 +173,7 @@ tail -n 120 ./cc-connect-run.log
 
 - 普通消息：进入 mini project，闲聊默认静默。
 - @ deep bot：进入 deep project，立即收到 `收到`。
+- 如果启用 `--mini-ignore-bot-mentions` 且运行时支持该字段，deep bot 的 @ 根消息和同话题回复不会再进入 mini。
 - `/help`：返回静态使用指南。
 - `/dream`：执行工作区整理。
 - 飞书回复某条任务消息：继续对应会话。

@@ -35,6 +35,28 @@ group_reply_all = true
 If both projects share one app, all-message routing can capture @ messages before
 the intended deep route.
 
+If your `cc-connect` runtime supports the patched mention guard, also configure
+the mini project to ignore the deep bot display name and/or open IDs:
+
+```toml
+ignore_bot_mentions = ["feishu-deep", "ou_deep_bot_open_id"]
+```
+
+Windows installer:
+
+```powershell
+-MiniIgnoreBotMentions "feishu-deep,ou_deep_bot_open_id"
+```
+
+Linux installer:
+
+```bash
+--mini-ignore-bot-mentions "feishu-deep,ou_deep_bot_open_id"
+```
+
+This prevents the all-message mini bot from handling the root @ message and
+later replies in that Feishu topic.
+
 ## Windows Terminal Opens on Every Message
 
 The hook should call the hidden VBS wrapper:

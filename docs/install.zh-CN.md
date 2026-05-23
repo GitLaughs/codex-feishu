@@ -112,6 +112,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -AdminOpenId "*" `
   -MiniModel "gpt-5.4-mini" `
   -MiniEffort "medium" `
+  -MiniIgnoreBotMentions "codex-deep,ou_deep_bot_open_id" `
   -MiniTriggerThreshold "strict" `
   -DeepModel "gpt-5.5" `
   -DeepEffort "high" `
@@ -248,6 +249,20 @@ group_reply_all = false
 ```
 
 并且 mini 和 deep 使用两个不同的飞书 app。
+
+如果你的 `cc-connect` 支持 `ignore_bot_mentions`，同时给 mini 增加 deep bot 的显示名或 open_id：
+
+```powershell
+-MiniIgnoreBotMentions "codex-deep,ou_deep_bot_open_id"
+```
+
+生成配置示例：
+
+```toml
+ignore_bot_mentions = ["codex-deep", "ou_deep_bot_open_id"]
+```
+
+这样 deep bot 被 @ 后，mini 会跳过根消息和同话题后续回复，不再重复处理。
 
 ### 每条消息都会弹出终端窗口
 

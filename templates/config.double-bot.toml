@@ -86,6 +86,7 @@ allow_from = "*"
 allow_chat = "__GROUP_CHAT_ID__"
 group_only = true
 group_reply_all = true
+__MINI_IGNORE_BOT_MENTIONS_LINE__
 share_session_in_channel = true
 thread_isolation = true
 reply_to_trigger = true

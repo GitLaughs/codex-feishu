@@ -7,6 +7,15 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-23
+
+### Added
+
+- Optional mini route guard generation through `ignore_bot_mentions` for runtimes that support dropping deep bot mentions before mini routing.
+- Windows installer parameter `-MiniIgnoreBotMentions`.
+- Linux installer flag `--mini-ignore-bot-mentions`.
+- Test coverage and docs for deep mention/topic silence in all-message mini deployments.
+
 ## [0.3.0] - 2026-05-23
 
 ### Added

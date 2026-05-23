@@ -11,6 +11,7 @@ deep_project=""
 admin_open_id=""
 mini_model=""
 mini_effort=""
+mini_ignore_bot_mentions=""
 mini_trigger_threshold=""
 deep_model=""
 deep_effort=""
@@ -42,6 +43,7 @@ while [[ $# -gt 0 ]]; do
     --admin-open-id) admin_open_id="$2"; shift 2 ;;
     --mini-model) mini_model="$2"; shift 2 ;;
     --mini-effort) mini_effort="$2"; shift 2 ;;
+    --mini-ignore-bot-mentions) mini_ignore_bot_mentions="$2"; shift 2 ;;
     --mini-trigger-threshold) mini_trigger_threshold="$2"; shift 2 ;;
     --deep-model) deep_model="$2"; shift 2 ;;
     --deep-effort) deep_effort="$2"; shift 2 ;;
@@ -108,6 +110,26 @@ replace_token() {
   local token="$2"
   local value="$3"
   printf '%s' "${content//${token}/${value}}"
+}
+
+toml_array_line() {
+  local key="$1"
+  local csv="$2"
+  local line=""
+  local item=""
+  IFS=',' read -r -a items <<<"$csv"
+  for item in "${items[@]}"; do
+    item="${item#"${item%%[![:space:]]*}"}"
+    item="${item%"${item##*[![:space:]]}"}"
+    [[ -n "$item" ]] || continue
+    if [[ -n "$line" ]]; then
+      line+=", "
+    fi
+    line+="\"$(toml_escape "$item")\""
+  done
+  if [[ -n "$line" ]]; then
+    printf '%s = [%s]' "$key" "$line"
+  fi
 }
 
 write_file() {
@@ -208,6 +230,7 @@ group_admin_line=""
 if [[ -n "$admin_open_id" && "$admin_open_id" != "*" ]]; then
   group_admin_line="admin_from = \"$(toml_escape "$admin_open_id")\""
 fi
+mini_ignore_bot_mentions_line="$(toml_array_line "ignore_bot_mentions" "$mini_ignore_bot_mentions")"
 
 config="$(<"$install_root/templates/config.double-bot.linux.toml")"
 config="$(replace_token "$config" "__INSTALL_ROOT__" "$(toml_escape "$install_root")")"
@@ -221,6 +244,7 @@ config="$(replace_token "$config" "__MINI_EFFORT__" "$(toml_escape "$mini_effort
 config="$(replace_token "$config" "__DEEP_MODEL__" "$(toml_escape "$deep_model")")"
 config="$(replace_token "$config" "__DEEP_EFFORT__" "$(toml_escape "$deep_effort")")"
 config="$(replace_token "$config" "__GROUP_ADMIN_LINE__" "$group_admin_line")"
+config="$(replace_token "$config" "__MINI_IGNORE_BOT_MENTIONS_LINE__" "$mini_ignore_bot_mentions_line")"
 config="$(replace_token "$config" "__MINI_APP_ID__" "$(toml_escape "$mini_app_id")")"
 config="$(replace_token "$config" "__MINI_APP_SECRET__" "$(toml_escape "$mini_app_secret")")"
 config="$(replace_token "$config" "__DEEP_APP_ID__" "$(toml_escape "$deep_app_id")")"
