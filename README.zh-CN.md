@@ -4,6 +4,8 @@
 
 [English README](README.md) · [Windows 安装](docs/install.zh-CN.md) · [Linux 安装](docs/install-linux.zh-CN.md) · [故障排查](docs/troubleshooting.md) · [MIT License](LICENSE)
 
+关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、Codex 群机器人、双机器人路由、话题隔离、即时收到回复、家庭记忆、群聊记忆、cc-connect 部署。
+
 `codex-feishu` 适合想把本地 Codex 接到飞书群里的个人或小团队。它不是新的聊天机器人框架，而是一套围绕
 [`cc-connect`](https://github.com/chenhg5/cc-connect) 的部署脚本、配置模板和使用约定。
 

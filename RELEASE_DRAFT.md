@@ -1,6 +1,8 @@
-# codex-feishu v0.5.0
+# codex-feishu v0.5.0｜飞书双机器人群聊工作流
 
 Packages the current production-style Feishu Codex workflow with platform-layer acknowledgements and optional family memory capture.
+
+中文关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、Codex 群机器人、双机器人路由、话题隔离、即时收到回复、家庭记忆、群聊记忆、cc-connect 部署。
 
 ## Highlights
 

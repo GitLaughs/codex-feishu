@@ -4,6 +4,8 @@ Dual-bot Feishu/Lark group routing for Codex through `cc-connect`.
 
 [中文 README](README.zh-CN.md) · [中文安装教程](docs/install.zh-CN.md) · [Linux 中文安装](docs/install-linux.zh-CN.md)
 
+Keywords: Feishu bot, Lark bot, Codex group chat, dual bot routing, topic isolation, instant acknowledgement, family memory, 飞书机器人, 飞书群聊 Codex, Lark 群机器人, 双机器人路由, 话题隔离, 家庭记忆。
+
 `codex-feishu` turns a Feishu group into a practical Codex workspace:
 
 - a fast mini bot monitors all group messages and decides whether to speak;
