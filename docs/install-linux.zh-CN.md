@@ -172,7 +172,7 @@ tail -n 120 ./cc-connect-run.log
 在群里测试：
 
 - 普通消息：进入 mini project，闲聊默认静默。
-- @ deep bot：进入 deep project，立即收到 `收到`。
+- @ deep bot：进入 deep project，立即收到 `收到正在输出，请等等我。`。
 - 如果启用 `--mini-ignore-bot-mentions` 且运行时支持该字段，deep bot 的 @ 根消息和同话题回复不会再进入 mini。
 - `/help`：返回静态使用指南。
 - `/dream`：执行工作区整理。

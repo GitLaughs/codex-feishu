@@ -23,7 +23,7 @@ message_text="${CC_HOOK_TEXT:-}
 ${CC_HOOK_CONTENT:-}
 ${CC_HOOK_MESSAGE:-}
 ${CC_HOOK_MESSAGE_TEXT:-}"
-ack_text="$(printf '\346\224\266\345\210\260')"
+ack_text="收到正在输出，请等等我。"
 
 if [[ "$event_name" != "message.received" ]]; then exit 0; fi
 if [[ -z "$project" || -z "$session" ]]; then exit 0; fi
@@ -47,4 +47,14 @@ fi
 
 if [[ "$should_ack" -ne 1 ]]; then exit 0; fi
 
-"$cc_connect" send --project "$project" --session "$session" --message "$ack_text" >/dev/null
+# message.received hooks can fire before cc-connect has fully registered the
+# target session for CLI sends. Retry briefly so the acknowledgement is still
+# immediate from the user's perspective but not lost to that race.
+for _ in 1 2 3 4 5 6 7 8; do
+  if "$cc_connect" send --project "$project" --session "$session" --message "$ack_text" >/dev/null 2>&1; then
+    exit 0
+  fi
+  sleep 0.25
+done
+
+exit 0

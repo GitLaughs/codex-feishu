@@ -19,7 +19,7 @@ $messageText = @(
 $ccConnectExe = Join-Path $env:APPDATA "npm\node_modules\cc-connect\bin\cc-connect.exe"
 $ccConnectCmd = Join-Path $env:APPDATA "npm\cc-connect.cmd"
 $ccConnect = if (Test-Path -LiteralPath $ccConnectExe) { $ccConnectExe } else { $ccConnectCmd }
-$ackText = -join ([char[]](0x6536, 0x5230))
+$ackText = -join ([char[]](0x6536, 0x5230, 0x6B63, 0x5728, 0x8F93, 0x51FA, 0xFF0C, 0x8BF7, 0x7B49, 0x7B49, 0x6211, 0x3002))
 
 if ($eventName -ne "message.received") { exit 0 }
 if ([string]::IsNullOrWhiteSpace($project) -or [string]::IsNullOrWhiteSpace($session)) { exit 0 }
@@ -42,5 +42,10 @@ if ($project -eq $DeepProject) {
 
 if (!$shouldAck) { exit 0 }
 
-& $ccConnect send --project $project --session $session --message $ackText | Out-Null
+for ($i = 0; $i -lt 8; $i++) {
+    & $ccConnect send --project $project --session $session --message $ackText *> $null
+    if ($LASTEXITCODE -eq 0) { exit 0 }
+    Start-Sleep -Milliseconds 250
+}
+
 exit 0

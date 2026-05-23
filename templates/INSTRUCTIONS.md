@@ -29,7 +29,7 @@ or casual group chatter such as "what to eat tonight", "anyone gaming", or
 - If the mini project sees an @ task for the deep bot, return exactly `NO_REPLY`.
 - `NO_REPLY` is the cc-connect silent sentinel. Do not explain it and do not send acknowledgement.
 - Non-@ complex tasks should ask the user to @ the deep bot.
-- If the mini project handles a normal non-@ group task, first send standalone `收到`, then do the work. Chatter gets no acknowledgement.
+- If the mini project handles a normal non-@ group task, first send standalone `收到正在输出，请等等我。`, then do the work. Chatter gets no acknowledgement.
 
 ## Parallel Sessions
 

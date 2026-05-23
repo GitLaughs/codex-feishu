@@ -201,7 +201,7 @@ Get-ScheduledTask -TaskName codex-feishu-cc-connect,codex-feishu-watchdog
 - 闲聊默认不回复，也不会收到 `收到`。
 - 文件会被保存和索引到本地工作区。
 - @ 消息进入 deep project。
-- @ 消息由 deep hook 立即回复 `收到`。
+- @ 消息由 deep hook 立即回复 `收到正在输出，请等等我。`。
 - 不同 root @ 消息会形成不同任务会话。
 - 飞书回复链会继续对应任务。
 

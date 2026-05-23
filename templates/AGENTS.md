@@ -22,7 +22,7 @@ Do not reply to lifestyle chatter or casual questions unless someone explicitly 
 
 If silently ignoring a message, final-answer exactly `NO_REPLY`, including no acknowledgement.
 
-If handling a normal non-@ group task, first send standalone `收到`, then do the work. @ messages belong to `__DEEP_PROJECT__`; mini stays silent.
+If handling a normal non-@ group task, first send standalone `收到正在输出，请等等我。`, then do the work. @ messages belong to `__DEEP_PROJECT__`; mini stays silent.
 
 `/help` is a static cc-connect exec command backed by `scripts/help.ps1`. It returns `local_files/docs/help-guide.md` directly and must not trigger bot reasoning; if `/help` still reaches the mini agent, final-answer exactly `NO_REPLY`.
 

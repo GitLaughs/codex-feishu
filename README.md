@@ -204,7 +204,7 @@ Normal group message:
 
 1. mini bot receives it;
 2. mini applies the configured trigger threshold;
-3. if mini decides to handle it, the first visible reply is standalone `收到`;
+3. if mini decides to handle it, the first visible reply is standalone `收到正在输出，请等等我。`;
 4. casual chat stays silent and receives no acknowledgement.
 
 Mini trigger threshold:
@@ -216,7 +216,7 @@ Mini trigger threshold:
 Deep task:
 
 1. user sends a root `@deep-bot ...` message;
-2. the hook sends immediate standalone `收到`;
+2. the hook sends immediate standalone `收到正在输出，请等等我。`;
 3. deep model works directly, not through mini relay;
 4. stream preview updates the Feishu message during long output.
 5. long tasks should send a short progress update roughly once per minute.

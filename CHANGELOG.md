@@ -7,6 +7,11 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored immediate acknowledgement delivery by retrying `cc-connect send` briefly when hooks fire before a session is ready.
+- Changed the acknowledgement text to `收到正在输出，请等等我。`.
+
 ## [0.4.0] - 2026-05-23
 
 ### Added

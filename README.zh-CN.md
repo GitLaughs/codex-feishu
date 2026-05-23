@@ -42,7 +42,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
 - Linux 可选安装 Codex API 余额轮询：从 cc-switch 的 opentoken 账号里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
-- deep 收到 @ 后立即发独立 `收到`，随后继续处理最终结果；mini 只有决定处理普通消息时才发 `收到`。
+- deep 收到 @ 后立即发独立 `收到正在输出，请等等我。`，随后继续处理最终结果；mini 只有决定处理普通消息时才发同样的提示。
 - 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
 - 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
 

@@ -125,7 +125,7 @@ environment.
 ## Mini Bot Says Acknowledgement Too Often
 
 By default the hook only auto-acknowledges the deep project. The mini project
-should send `收到` itself only after it decides a normal group message is worth
+should send `收到正在输出，请等等我。` itself only after it decides a normal group message is worth
 handling.
 
 If mini is acknowledging every message, check whether the hook was generated
