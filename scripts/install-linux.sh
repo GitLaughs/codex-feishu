@@ -203,7 +203,16 @@ echo "Deep Feishu app credentials"
 [[ -n "$deep_app_secret" ]] || deep_app_secret="$(read_secret "Deep app_secret")"
 
 mkdir -p "$(dirname "$config_path")"
-mkdir -p "$workspace_path/scripts" "$workspace_path/memory/dreams" "$workspace_path/memory/lark-events"
+mkdir -p "$workspace_path/scripts"
+for folder in daily facts inbox people projects reviews search tasks dreams lark-events; do
+  mkdir -p "$workspace_path/memory/$folder"
+done
+for file_name in open.md done.md; do
+  task_path="$workspace_path/memory/tasks/$file_name"
+  if [[ ! -f "$task_path" ]]; then
+    printf '# %s\n' "$file_name" >"$task_path"
+  fi
+done
 for folder in incoming docs data media code assets; do
   mkdir -p "$workspace_path/local_files/$folder"
 done
@@ -215,6 +224,7 @@ if [[ ! -f "$index_path" ]]; then
 
 | Date | Name | Path | Type | Notes |
 |---|---|---|---|---|
+| generated | help-guide.md | `local_files/docs/help-guide.md` | docs | Static command guide |
 EOF
 fi
 
@@ -223,7 +233,7 @@ if [[ ! -f "$knowledge_path" ]]; then
   printf '# Knowledge\n' >"$knowledge_path"
 fi
 
-for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh lark-event-listener.sh help.sh dream.sh generate-image.js; do
+for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh lark-event-listener.sh help.sh dream.sh generate-image.js codex-feishu-index.py codex-feishu-command.py codex-feishu-health-command.py codex-feishu-file-health.py codex-feishu-memory-health.py codex-feishu-manifest-health.py codex-feishu-help-health.py codex-feishu-redact-runs.py codex-feishu-reindex.sh test-codex-feishu-command-isolation.py; do
   cp "$install_root/scripts/$script_name" "$workspace_path/scripts/$script_name"
   chmod +x "$workspace_path/scripts/$script_name" 2>/dev/null || true
 done
@@ -258,6 +268,16 @@ dream_prompt="$(replace_token "$dream_prompt" "__WORKSPACE__" "$workspace_path")
 write_file "$workspace_path/scripts/dream_prompt.md" "$dream_prompt"
 
 cp "$install_root/templates/help-guide.md" "$workspace_path/local_files/docs/help-guide.md"
+
+workspace_name="$(basename "$workspace_path")"
+manifest="$(<"$install_root/templates/workspace_manifest.json")"
+manifest="$(replace_token "$manifest" "__WORKSPACE_NAME__" "$workspace_name")"
+manifest="$(replace_token "$manifest" "__WORKSPACE__" "$workspace_path")"
+manifest="$(replace_token "$manifest" "__MINI_PROJECT__" "$mini_project")"
+manifest="$(replace_token "$manifest" "__DEEP_PROJECT__" "$deep_project")"
+manifest="$(replace_token "$manifest" "__MINI_MODEL__" "$mini_model")"
+manifest="$(replace_token "$manifest" "__DEEP_MODEL__" "$deep_model")"
+write_file "$workspace_path/workspace_manifest.json" "$manifest"
 
 group_admin_line=""
 if [[ -n "$admin_open_id" && "$admin_open_id" != "*" ]]; then

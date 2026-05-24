@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "workspace": "__WORKSPACE_NAME__",
+  "scope": "feishu_group",
+  "root": "__WORKSPACE__",
+  "entrypoints": [
+    {
+      "name": "__MINI_PROJECT__",
+      "platform": "feishu",
+      "mode": "all_message_filter",
+      "model": "__MINI_MODEL__"
+    },
+    {
+      "name": "__DEEP_PROJECT__",
+      "platform": "feishu",
+      "mode": "mention_deep",
+      "model": "__DEEP_MODEL__"
+    }
+  ],
+  "commands": [
+    "/help",
+    "/dream",
+    "/status-index",
+    "/health-codex-feishu",
+    "/files",
+    "/files find",
+    "/files recent",
+    "/files pending",
+    "/knowledge",
+    "/knowledge summary",
+    "/knowledge search",
+    "/memfind",
+    "/memfind recent",
+    "/tasks",
+    "/tasks list",
+    "/workspace-info",
+    "/画图"
+  ],
+  "planned_commands": [
+    "/remember draft",
+    "/remember approve",
+    "/forget find",
+    "/forget archive",
+    "/memory review",
+    "/files describe",
+    "/files ingest pending",
+    "/files link",
+    "/files archive"
+  ],
+  "data_sources": [
+    "INSTRUCTIONS.md",
+    "KNOWLEDGE.md",
+    "memory/",
+    "local_files/",
+    "workspace_manifest.json"
+  ],
+  "guardrails": [
+    "Only access this generated workspace in group context.",
+    "Use OnIt reaction as acknowledgement for handled tasks.",
+    "Planned write commands must stay out of active commands until confirmation and audit paths exist."
+  ],
+  "resource_policy": {
+    "preferred_storage": "sqlite_fts5",
+    "avoid": [
+      "always-on vector service",
+      "background multi-model loops",
+      "unbounded file scans per message"
+    ]
+  }
+}

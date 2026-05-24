@@ -25,6 +25,41 @@ description = "Group workspace memory maintenance"
 exec = "bash \"__WORKSPACE__/scripts/dream.sh\""
 work_dir = "__WORKSPACE__"
 
+[[commands]]
+name = "files"
+description = "Search and list indexed workspace files"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /files {{args}}"
+
+[[commands]]
+name = "memfind"
+description = "Search indexed workspace memory"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /memfind {{args}}"
+
+[[commands]]
+name = "knowledge"
+description = "Search or summarize workspace knowledge"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /knowledge {{args}}"
+
+[[commands]]
+name = "tasks"
+description = "List workspace tasks"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /tasks {{args}}"
+
+[[commands]]
+name = "workspace-info"
+description = "Show workspace manifest and command surface"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /workspace-info"
+
+[[commands]]
+name = "status-index"
+description = "Show deterministic index status"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /status index"
+
+[[commands]]
+name = "health-codex-feishu"
+description = "Show local codex-feishu workspace health"
+exec = "python3 \"__WORKSPACE__/scripts/codex-feishu-health-command.py\" --root \"__WORKSPACE__\""
+
 __FAMILY_MEMORY_HOOK_BLOCK__
 
 [[projects]]

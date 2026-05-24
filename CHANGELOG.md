@@ -7,12 +7,23 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-24
+
 ### Added
 
+- Added generated `workspace_manifest.json` with active commands, planned commands, data sources, guardrails, and resource policy.
+- Added deterministic SQLite/FTS5 read-only command scripts for `/files`, `/memfind`, `/knowledge`, `/tasks`, `/workspace-info`, and `/status-index`.
+- Added `/health-codex-feishu` command plus manifest, help, file, memory, and run-log redaction health checks.
+- Added `docs/memory-file-optimization-plan.md` for the memory and file management roadmap.
+- Added installer smoke coverage for generated manifests, deterministic commands, local reindex, command isolation, and health checks.
 - Added `docs/product-iteration-plan.md` with a P0-P3 codex-feishu hardening roadmap.
 - Added `docs/optimization-report-2026-05-23.md` with current server status and next operational priorities.
 - Added `scripts/audit-secrets.ps1` for pre-release secret scanning.
 - Added `scripts/codex-feishu-healthcheck.sh` for server-side systemd, project-count, resource, and recent-error checks.
+
+### Changed
+
+- `/remember`, `/forget`, `/memory review`, and write-oriented file commands are now documented as planned commands rather than active commands until confirmation and audit flows exist.
 
 ## [0.6.0] - 2026-05-23
 

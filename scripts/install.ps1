@@ -159,9 +159,15 @@ $configDir = Split-Path -Parent $ConfigPath
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 New-Item -ItemType Directory -Force -Path $WorkspacePath | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "scripts") | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "memory") | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "memory\dreams") | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "memory\lark-events") | Out-Null
+foreach ($folder in "daily","facts","inbox","people","projects","reviews","search","tasks","dreams","lark-events") {
+    New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "memory\$folder") | Out-Null
+}
+foreach ($fileName in "open.md","done.md") {
+    $taskPath = Join-Path $WorkspacePath "memory\tasks\$fileName"
+    if (!(Test-Path -LiteralPath $taskPath)) {
+        Set-Content -LiteralPath $taskPath -Encoding UTF8 -Value "# $fileName`n"
+    }
+}
 
 foreach ($folder in "incoming","docs","data","media","code","assets") {
     New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "local_files\$folder") | Out-Null
@@ -173,7 +179,8 @@ if (!(Test-Path -LiteralPath $indexPath)) {
         "# Local File Index",
         "",
         "| Date | Name | Path | Type | Notes |",
-        "|---|---|---|---|---|"
+        "|---|---|---|---|---|",
+        '| generated | help-guide.md | `local_files/docs/help-guide.md` | docs | Static command guide |'
     )
 }
 
@@ -203,7 +210,7 @@ timeout = 8
 "@
 }
 
-foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js") {
+foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js","codex-feishu-index.py","codex-feishu-command.py","codex-feishu-health-command.py","codex-feishu-file-health.py","codex-feishu-memory-health.py","codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-redact-runs.py","codex-feishu-reindex.ps1","test-codex-feishu-command-isolation.py") {
     Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\$scriptName") -Force
 }
 if ($EnableFamilyMemory) {
@@ -240,6 +247,17 @@ Write-Utf8File -Path (Join-Path $WorkspacePath "scripts\dream_prompt.md") -Conte
 
 $helpGuideTemplate = Get-Content -LiteralPath (Join-Path $InstallRoot "templates\help-guide.md") -Raw
 Write-Utf8File -Path (Join-Path $WorkspacePath "local_files\docs\help-guide.md") -Content $helpGuideTemplate
+
+$workspaceName = Split-Path -Leaf $WorkspacePath
+$manifestTemplate = Get-Content -LiteralPath (Join-Path $InstallRoot "templates\workspace_manifest.json") -Raw
+$manifest = $manifestTemplate.
+    Replace("__WORKSPACE_NAME__", $workspaceName).
+    Replace("__WORKSPACE__", (Convert-ToForwardSlash $WorkspacePath)).
+    Replace("__MINI_PROJECT__", $miniProject).
+    Replace("__DEEP_PROJECT__", $deepProject).
+    Replace("__MINI_MODEL__", $miniModel).
+    Replace("__DEEP_MODEL__", $deepModel)
+Write-Utf8File -Path (Join-Path $WorkspacePath "workspace_manifest.json") -Content $manifest
 
 $startupVbsPath = Join-Path $InstallRoot "cc-connect-startup-hidden.vbs"
 $watchScript = Join-Path $InstallRoot "scripts\watch-cc-connect.ps1"

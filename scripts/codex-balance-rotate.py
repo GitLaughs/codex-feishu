@@ -11,7 +11,7 @@ import urllib.request
 
 
 DEFAULT_DB = os.path.expanduser("~/.cc-switch/cc-switch.db")
-DEFAULT_ENV = "/etc/openclaw.env"
+DEFAULT_ENV = "/etc/codex-feishu.env"
 DEFAULT_AUTH = os.path.expanduser("~/.codex/auth.json")
 DEFAULT_CODEX_CONFIG = os.path.expanduser("~/.codex/config.toml")
 DEFAULT_FALLBACK_FILE = os.path.expanduser("~/.cc-switch/codex-fallback-providers.json")

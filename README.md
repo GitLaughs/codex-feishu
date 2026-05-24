@@ -14,6 +14,7 @@ Keywords: Feishu bot, Lark bot, Codex group chat, dual bot routing, topic isolat
 - a deep bot handles direct @ tasks with a stronger model;
 - Feishu reply chains become isolated task sessions;
 - `/help` and `/dream` provide static help and workspace maintenance without normal chat routing;
+- deterministic read-only commands provide local `/files`, `/memfind`, `/knowledge`, `/tasks`, `/workspace-info`, `/status-index`, and `/health-codex-feishu` lookups;
 - deep @ tasks can send an immediate platform acknowledgement without a command hook;
 - stream preview keeps long-running answers visible while Codex works;
 - files can be saved, classified, indexed, and summarized into a local workspace.
@@ -68,6 +69,8 @@ flowchart LR
 - Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
 - Stream preview tuned for visible progress during long replies.
 - Workspace bootstrap with `AGENTS.md`, `INSTRUCTIONS.md`, `KNOWLEDGE.md`, `memory`, and `local_files`.
+- Workspace manifest generation with active commands, planned commands, data sources, and guardrails.
+- SQLite/FTS5 read-only lookup scripts and health checks for manifest/help/files/memory/run-log redaction.
 - File import helper with safe names, type classification, SHA256 short hash, and Markdown indexing.
 - Feishu/Lark helper scripts for bounded event listening, resource download, and redacted health checks.
 - GitHub-ready project metadata: CI, release configuration, issue templates, and release checklist.
@@ -244,6 +247,7 @@ Static commands:
 
 - `/help`: returns `local_files/docs/help-guide.md` without model reasoning.
 - `/dream`: runs a bounded workspace maintenance pass and writes detailed notes under `memory`.
+- `/files`, `/memfind`, `/knowledge`, `/tasks`, `/workspace-info`, `/status-index`, and `/health-codex-feishu`: run deterministic local scripts without model reasoning.
 - `/画图`, `/生图`, `/img`, `画图`, `生图`: when the runtime supports `image_command_enabled`, the Feishu platform calls `scripts/generate-image.js`, uploads the generated image, and records metadata under `memory/image-events-YYYY-MM-DD.jsonl`.
 
 Image generation needs an OpenAI-compatible image API key in the service environment, for example:
@@ -261,6 +265,24 @@ Optional family memory:
 - the hook records only into the configured workspace under `memory/messages`, `memory/people`, and `memory/family`;
 - supported explicit commands include `记住：...`, `忘掉：...`, `待办：...`, `购物：...`, and `你记得什么`;
 - this hook is for memory capture only. It is not the immediate acknowledgement mechanism.
+
+Read-only workspace commands:
+
+- `/files find <keyword>`, `/files recent [n]`, and `/files pending`
+- `/knowledge summary` and `/knowledge search <keyword>`
+- `/memfind <keyword>` and `/memfind recent [n]`
+- `/tasks list`
+- `/workspace-info`
+- `/status-index`
+- `/health-codex-feishu`
+
+Refresh the local SQLite/FTS index on demand:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\codex-feishu-reindex.ps1 -Root E:\FeishuCodexWorkspace -Force
+```
+
+Memory write commands remain in `planned_commands` until confirmation, audit, and soft-delete paths are implemented. See [Memory and file management roadmap](docs/memory-file-optimization-plan.md).
 
 Parallel tasks:
 
@@ -346,6 +368,7 @@ Expected:
 - [Release checklist](docs/release-checklist.md)
 - [Product iteration plan](docs/product-iteration-plan.md)
 - [Optimization report 2026-05-23](docs/optimization-report-2026-05-23.md)
+- [Memory and file management roadmap](docs/memory-file-optimization-plan.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

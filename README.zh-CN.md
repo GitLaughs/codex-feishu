@@ -41,6 +41,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - @ 任务直接进入 deep bot，避免 mini 中转带来的误路由。
 - 支持流式预览，让长任务不再像“卡住了”。
 - `/help` 静态帮助和 `/dream` 工作区整理命令。
+- 确定性只读命令：`/files`、`/memfind`、`/knowledge`、`/tasks`、`/workspace-info`、`/status-index`、`/health-codex-feishu`。
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
 - Linux 可选安装 Codex API 余额轮询：从 cc-switch 中兼容 OpenAI API 的 provider 里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
@@ -48,6 +49,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - 支持平台层画图命令：`/画图`、`/生图`、`/img`、`画图`、`生图`。
 - 可选家庭记忆捕获：把明确的“记住 / 待办 / 购物 / 查记忆”消息写到工作区本地 `memory` 文件。
 - 本地文件整理约定：`local_files`、`INDEX.md`、`KNOWLEDGE.md`。
+- `workspace_manifest.json` 记录当前群工作区入口、命令面、数据源和 planned commands。
 - 群聊项目默认禁用 `/shell`、`/dir`、`/cron`、`/provider`、`/restart`、`/upgrade`、`/commands`。
 
 ## 工作方式
@@ -75,6 +77,7 @@ flowchart LR
 - 用户用飞书“回复”继续某条任务时，会回到对应会话。
 - `/help` 直接返回静态指南，不进入模型推理。
 - `/dream` 使用 deep 模型整理本地工作区知识、索引和记忆。
+- `/files`、`/memfind`、`/knowledge`、`/tasks` 走 SQLite/FTS5 本地索引，不进入模型推理。
 
 ## 安装前准备
 
@@ -226,6 +229,29 @@ FEISHU_IMAGE_API_KEY=sk-...
 FEISHU_IMAGE_API_MODE=images
 FEISHU_IMAGE_IMAGES_MODEL=gpt-image-1
 ```
+
+## 只读检索和健康检查
+
+安装器会把确定性命令脚本复制到群工作区，并在 `config.toml` 中注册：
+
+- `/files find <关键词>`：搜索本群文件、知识库、manifest。
+- `/files recent [数量]`：查看最近本地文件。
+- `/files pending`：查看未分类 `local_files/incoming` 文件。
+- `/knowledge summary`：查看 `KNOWLEDGE.md` 摘要。
+- `/knowledge search <关键词>`：只查 curated knowledge。
+- `/memfind <关键词>` 和 `/memfind recent [数量]`：查记忆和项目记录。
+- `/tasks list`：查看任务条目。
+- `/workspace-info`：查看工作区 manifest 和命令面。
+- `/status-index`：查看 SQLite/FTS5 索引状态。
+- `/health-codex-feishu`：检查 manifest、help、文件索引、记忆和 runs 脱敏状态。
+
+索引可按需刷新：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\codex-feishu-reindex.ps1 -Root E:\FeishuCodexWorkspace -Force
+```
+
+写记忆相关命令目前只进入 `planned_commands`，不会作为 active command 上线，直到确认、审计和软删除链路完成。路线图见 [docs/memory-file-optimization-plan.md](docs/memory-file-optimization-plan.md)。
 
 ## 可选家庭记忆
 

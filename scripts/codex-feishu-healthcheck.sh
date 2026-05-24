@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="${OPENCLAW_ROOT:-/opt/openclaw}"
-LOG_FILE="${OPENCLAW_HEALTH_LOG:-/var/log/openclaw-health.log}"
-CC_LOG="${OPENCLAW_CC_LOG:-/var/log/cc-connect.log}"
-MIN_AVAILABLE_MB="${OPENCLAW_MIN_AVAILABLE_MB:-300}"
-MAX_DISK_USE_PCT="${OPENCLAW_MAX_DISK_USE_PCT:-80}"
-EXPECTED_PROJECTS="${OPENCLAW_EXPECTED_PROJECTS:-9}"
+PROJECT_ROOT="${CODEX_FEISHU_ROOT:-/opt/codex-feishu}"
+LOG_FILE="${CODEX_FEISHU_HEALTH_LOG:-/var/log/codex-feishu-health.log}"
+CC_LOG="${CODEX_FEISHU_CC_LOG:-/var/log/cc-connect.log}"
+MIN_AVAILABLE_MB="${CODEX_FEISHU_MIN_AVAILABLE_MB:-300}"
+MAX_DISK_USE_PCT="${CODEX_FEISHU_MAX_DISK_USE_PCT:-80}"
+EXPECTED_PROJECTS="${CODEX_FEISHU_EXPECTED_PROJECTS:-9}"
 
 json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/' | tr -d '\n' | sed 's/\\n$//'
@@ -92,4 +92,3 @@ printf '%s\n' "$report" | tee -a "$LOG_FILE"
 if [[ "$ok" != "true" ]]; then
   exit 1
 fi
-

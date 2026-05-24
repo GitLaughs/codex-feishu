@@ -81,6 +81,21 @@ if ($bashUsable) {
     Write-Host "SKIP bash not found or not usable"
 }
 
+Write-Host "== Python parse check =="
+$python = Get-Command python -ErrorAction SilentlyContinue
+if ($python) {
+    $pyFiles = Get-ChildItem -LiteralPath (Join-Path $Root "scripts") -Filter *.py
+    $pyArgs = @("-m", "py_compile") + ($pyFiles | ForEach-Object { $_.FullName })
+    $output = & $python.Source @pyArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Add-Failure "Python parser errors: $($output | Out-String)"
+    } else {
+        Write-Host "OK   Python scripts"
+    }
+} else {
+    Add-Failure "python not found; deterministic command scripts require Python."
+}
+
 Write-Host "== Secret and local-data scan =="
 $privateUserName = -join ([char[]](0x7528, 0x6237, 0x0033, 0x0030, 0x0039, 0x0032, 0x0032, 0x0034))
 $privateGroupName = -join ([char[]](0x96C6, 0x521B, 0x8D5B))
@@ -151,6 +166,11 @@ try {
         $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8
         if (!$config.Contains('name = "help"')) { Add-Failure "Install smoke did not generate /help command." }
         if (!$config.Contains('name = "dream"')) { Add-Failure "Install smoke did not generate /dream command." }
+        foreach ($commandName in "files","memfind","knowledge","tasks","workspace-info","status-index","health-codex-feishu") {
+            if (!$config.Contains("name = `"$commandName`"")) {
+                Add-Failure "Install smoke did not generate /$commandName command."
+            }
+        }
         if (!$config.Contains('disabled_commands = ["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"]')) {
             Add-Failure "Install smoke did not disable privileged group commands."
         }
@@ -189,11 +209,17 @@ try {
         }
     }
     if (!(Test-Path -LiteralPath (Join-Path $workspace "AGENTS.md"))) { Add-Failure "Install smoke did not generate workspace AGENTS.md." }
+    if (!(Test-Path -LiteralPath (Join-Path $workspace "workspace_manifest.json"))) { Add-Failure "Install smoke did not generate workspace manifest." }
     if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\dream_prompt.md"))) { Add-Failure "Install smoke did not generate dream prompt." }
     if (!(Test-Path -LiteralPath (Join-Path $workspace "local_files\docs\help-guide.md"))) { Add-Failure "Install smoke did not generate help guide." }
     foreach ($scriptName in "lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js") {
         if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\$scriptName"))) {
             Add-Failure "Install smoke did not copy $scriptName."
+        }
+    }
+    foreach ($scriptName in "codex-feishu-index.py","codex-feishu-command.py","codex-feishu-health-command.py","codex-feishu-file-health.py","codex-feishu-memory-health.py","codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-redact-runs.py","codex-feishu-reindex.ps1") {
+        if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\$scriptName"))) {
+            Add-Failure "Install smoke did not copy deterministic command script $scriptName."
         }
     }
     foreach ($scriptName in "family-memory-capture.ps1","family-memory-capture.py","cc-connect-memory-hook.ps1","test-family-memory.ps1","test-family-memory-hook.ps1") {
@@ -207,6 +233,30 @@ try {
         }
     }
     if (Test-Path -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs")) { Add-Failure "Install smoke generated legacy hidden ack wrapper." }
+    if ($python) {
+        $reindexOutput = & $python.Source (Join-Path $workspace "scripts\codex-feishu-index.py") --root $workspace reindex 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Failure "Install smoke deterministic reindex failed: $($reindexOutput | Out-String)"
+        }
+        $isolationOutput = & $python.Source (Join-Path $workspace "scripts\test-codex-feishu-command-isolation.py") --root $workspace 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Failure "Install smoke command isolation failed: $($isolationOutput | Out-String)"
+        } else {
+            Write-Host "OK   deterministic command isolation"
+        }
+        foreach ($healthScript in "codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-file-health.py","codex-feishu-memory-health.py") {
+            $healthOutput = & $python.Source (Join-Path $workspace "scripts\$healthScript") --root $workspace 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                Add-Failure "$healthScript failed in install smoke: $($healthOutput | Out-String)"
+            }
+        }
+        $healthCommandOutput = & $python.Source (Join-Path $workspace "scripts\codex-feishu-health-command.py") --root $workspace 2>&1
+        if ($LASTEXITCODE -ne 0 -or (($healthCommandOutput | Out-String) -notmatch "codex-feishu 健康：OK")) {
+            Add-Failure "codex-feishu health command failed in install smoke: $($healthCommandOutput | Out-String)"
+        } else {
+            Write-Host "OK   codex-feishu health command"
+        }
+    }
 }
 finally {
     Remove-Item -LiteralPath (Join-Path $Root "scripts\cc-connect-ack-hidden.vbs") -Force -ErrorAction SilentlyContinue

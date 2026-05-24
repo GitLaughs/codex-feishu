@@ -71,6 +71,9 @@ bash "$root/scripts/install-linux.sh" \
 [[ -f "$tmp/config.toml" ]] || add_failure "Linux install did not generate config."
 grep -q 'name = "help"' "$tmp/config.toml" || add_failure "Linux install did not generate /help command."
 grep -q 'name = "dream"' "$tmp/config.toml" || add_failure "Linux install did not generate /dream command."
+for command_name in files memfind knowledge tasks workspace-info status-index health-codex-feishu; do
+  grep -q "name = \"${command_name}\"" "$tmp/config.toml" || add_failure "Linux install did not generate /${command_name} command."
+done
 grep -q 'disabled_commands = \["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"\]' "$tmp/config.toml" || add_failure "Linux install did not disable privileged group commands."
 if grep -q 'admin_from = "\*"' "$tmp/config.toml"; then
   add_failure "Linux install should not grant wildcard group admin privileges."
@@ -85,13 +88,21 @@ grep -q 'generate-image.js' "$tmp/config.toml" || add_failure "Linux install did
 grep -q 'cc-connect-memory-hook.sh' "$tmp/config.toml" || add_failure "Linux install did not generate optional family memory hook."
 [[ -f "$tmp/workspace/AGENTS.md" ]] || add_failure "Linux install did not generate AGENTS.md."
 [[ -f "$tmp/workspace/INSTRUCTIONS.md" ]] || add_failure "Linux install did not generate INSTRUCTIONS.md."
+[[ -f "$tmp/workspace/workspace_manifest.json" ]] || add_failure "Linux install did not generate workspace manifest."
 [[ -f "$tmp/workspace/scripts/dream_prompt.md" ]] || add_failure "Linux install did not generate dream prompt."
 [[ -f "$tmp/workspace/local_files/docs/help-guide.md" ]] || add_failure "Linux install did not generate help guide."
 [[ -f "$tmp/workspace/scripts/import-local-file.sh" ]] || add_failure "Linux install did not copy import-local-file.sh."
 [[ -f "$tmp/workspace/scripts/generate-image.js" ]] || add_failure "Linux install did not copy generate-image.js."
 [[ -f "$tmp/workspace/scripts/family-memory-capture.py" ]] || add_failure "Linux install did not copy family-memory-capture.py."
 [[ -f "$tmp/workspace/scripts/cc-connect-memory-hook.sh" ]] || add_failure "Linux install did not copy cc-connect-memory-hook.sh."
+for script_name in codex-feishu-index.py codex-feishu-command.py codex-feishu-health-command.py codex-feishu-file-health.py codex-feishu-memory-health.py codex-feishu-manifest-health.py codex-feishu-help-health.py codex-feishu-redact-runs.py codex-feishu-reindex.sh test-codex-feishu-command-isolation.py; do
+  [[ -f "$tmp/workspace/scripts/$script_name" ]] || add_failure "Linux install did not copy deterministic command script $script_name."
+done
 [[ -d "$tmp/workspace/memory/family" ]] || add_failure "Linux install did not create family memory folder."
+
+python3 "$tmp/workspace/scripts/codex-feishu-index.py" --root "$tmp/workspace" reindex >/dev/null || add_failure "Linux deterministic reindex failed."
+python3 "$tmp/workspace/scripts/test-codex-feishu-command-isolation.py" --root "$tmp/workspace" >/dev/null || add_failure "Linux command isolation failed."
+python3 "$tmp/workspace/scripts/codex-feishu-health-command.py" --root "$tmp/workspace" | grep -q 'codex-feishu 健康：OK' || add_failure "Linux codex-feishu health command failed."
 
 rm -rf "$tmp"
 
