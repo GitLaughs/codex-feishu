@@ -44,6 +44,15 @@ tmp="$root/.tmp/linux-test"
 rm -rf "$tmp"
 mkdir -p "$tmp"
 
+python_bin=""
+if command -v python3 >/dev/null 2>&1 && python3 --version >/dev/null 2>&1; then
+  python_bin="python3"
+elif command -v python >/dev/null 2>&1 && python --version >/dev/null 2>&1; then
+  python_bin="python"
+else
+  add_failure "python not found; deterministic command scripts require Python."
+fi
+
 bash "$root/scripts/install-linux.sh" \
   --install-root "$root" \
   --config-path "$tmp/config.toml" \
@@ -100,9 +109,11 @@ for script_name in codex-feishu-index.py codex-feishu-command.py codex-feishu-he
 done
 [[ -d "$tmp/workspace/memory/family" ]] || add_failure "Linux install did not create family memory folder."
 
-python3 "$tmp/workspace/scripts/codex-feishu-index.py" --root "$tmp/workspace" reindex >/dev/null || add_failure "Linux deterministic reindex failed."
-python3 "$tmp/workspace/scripts/test-codex-feishu-command-isolation.py" --root "$tmp/workspace" >/dev/null || add_failure "Linux command isolation failed."
-python3 "$tmp/workspace/scripts/codex-feishu-health-command.py" --root "$tmp/workspace" | grep -q 'codex-feishu 健康：OK' || add_failure "Linux codex-feishu health command failed."
+if [[ -n "$python_bin" ]]; then
+  "$python_bin" "$tmp/workspace/scripts/codex-feishu-index.py" --root "$tmp/workspace" reindex >/dev/null || add_failure "Linux deterministic reindex failed."
+  "$python_bin" "$tmp/workspace/scripts/test-codex-feishu-command-isolation.py" --root "$tmp/workspace" >/dev/null || add_failure "Linux command isolation failed."
+  "$python_bin" "$tmp/workspace/scripts/codex-feishu-health-command.py" --root "$tmp/workspace" | grep -q 'codex-feishu 健康：OK' || add_failure "Linux codex-feishu health command failed."
+fi
 
 rm -rf "$tmp"
 

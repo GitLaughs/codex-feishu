@@ -7,5 +7,7 @@ scripts/cc-connect-ack-hidden.vbs
 workspace/
 local_files/
 node_modules/
+__pycache__/
+*.pyc
 *.tmp
 .tmp/

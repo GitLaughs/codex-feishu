@@ -12,6 +12,24 @@
 
 ## 安装依赖
 
+如果是全新的 Ubuntu 服务器，可以先用新手 bootstrap 脚本准备系统依赖、Node.js、Codex 和 `cc-connect`：
+
+```bash
+sudo bash ./scripts/bootstrap-linux.sh
+```
+
+也可以从任意目录直接指定仓库位置：
+
+```bash
+sudo bash ./scripts/bootstrap-linux.sh --checkout-dir /opt/codex-feishu
+cd /opt/codex-feishu
+bash ./scripts/install-linux.sh
+```
+
+bootstrap 只负责主机环境准备和仓库 clone/update，不会写入飞书 app_secret、API key、open_id、chat_id 或真实 cc-connect 配置。真实飞书应用信息仍在后面的 `install-linux.sh` 交互流程中填写。
+
+如果你已经装好依赖，也可以手动确认：
+
 ```bash
 node --version
 npm --version

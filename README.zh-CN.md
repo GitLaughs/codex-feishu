@@ -44,6 +44,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - 确定性只读命令：`/files`、`/memfind`、`/knowledge`、`/tasks`、`/workspace-info`、`/status-index`、`/health-codex-feishu`。
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
+- 新手 Ubuntu bootstrap 脚本可自动准备 apt 依赖、swap、Node.js 22、Codex、cc-connect，并 clone/update 仓库。
 - Linux 可选安装 Codex API 余额轮询：从 cc-switch 中兼容 OpenAI API 的 provider 里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
 - 机器人决定处理消息时先给原消息加 `OnIt` / workingonit 表情 reaction；mini 静默时不加额外回复。
 - 支持平台层画图命令：`/画图`、`/生图`、`/img`、`画图`、`生图`。
@@ -109,6 +110,14 @@ https://open.feishu.cn/app/<app_id>
 
 Windows 完整步骤见 [中文安装教程](docs/install.zh-CN.md)。
 Linux 完整步骤见 [Linux 安装教程](docs/install-linux.zh-CN.md)。
+
+全新 Ubuntu 服务器可以先跑：
+
+```bash
+sudo bash ./scripts/bootstrap-linux.sh --checkout-dir /opt/codex-feishu
+cd /opt/codex-feishu
+bash ./scripts/install-linux.sh
+```
 
 ## 快速安装
 

@@ -1,20 +1,22 @@
-# codex-feishu v0.7.0｜飞书工作区检索和健康检查
+# codex-feishu v0.8.0｜Linux 新手安装和云端发行说明
 
-Adds deterministic read-only workspace commands, generated workspace manifests, and local health checks for Feishu/Lark group bots.
+Adds a beginner-friendly Ubuntu bootstrap path and release documentation for the current cloud Linux deployment baseline.
 
 中文关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、群聊记忆、文件检索、工作区健康检查、Codex 群机器人、cc-connect 部署。
 
 ## Highlights
 
-- Installers now generate `workspace_manifest.json` with active commands, planned commands, data sources, guardrails, and resource policy.
-- New deterministic read-only commands: `/files`, `/memfind`, `/knowledge`, `/tasks`, `/workspace-info`, `/status-index`, and `/health-codex-feishu`.
-- New SQLite/FTS5 index scripts search workspace files, memory, knowledge, tasks, and manifests without invoking the model.
-- New health checks cover manifest consistency, static `/help` command discovery, file index coverage, memory file health, and run-log query redaction.
-- New roadmap document separates current read-only lookup from planned write commands such as `/remember draft`, `/remember approve`, and `/forget archive`.
+- New `scripts/bootstrap-linux.sh` prepares a fresh Ubuntu host for codex-feishu.
+- Bootstrap installs apt dependencies, optional swap, Node.js 22, pinned `@openai/codex@0.133.0`, and pinned `cc-connect@1.3.3-beta.2`.
+- Bootstrap can clone or update `https://github.com/GitLaughs/codex-feishu.git`, then hands off to `scripts/install-linux.sh`.
+- Linux install docs now separate host bootstrap from Feishu app credentials and runtime config generation.
+- Changelog and docs record the current cloud Linux baseline while keeping private server config out of the public repo.
 
 ## Required Runtime
 
-This release packages deployment templates and helper scripts. The deterministic commands are normal cc-connect `[[commands]]` entries and require Python on the host. Image commands still require a runtime that supports Feishu `image_command_enabled`, `image_script`, `image_workspace`, `image_timeout_secs`, and `image_triggers` platform options.
+This release packages deployment templates and helper scripts. The beginner bootstrap targets Ubuntu hosts and installs Node.js 22 plus Python 3. Deterministic commands remain normal cc-connect `[[commands]]` entries and require Python on the host. Image commands still require a runtime that supports Feishu `image_command_enabled`, `image_script`, `image_workspace`, `image_timeout_secs`, and `image_triggers` platform options.
+
+Bootstrap does not write Feishu app secrets, OpenAI-compatible API keys, user IDs, group IDs, or generated cc-connect config. Run `scripts/install-linux.sh` after bootstrap to configure a real Feishu deployment.
 
 ## Verify
 

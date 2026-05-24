@@ -61,6 +61,8 @@ flowchart LR
 - Feishu reply continuation through `reply_to_trigger = true`.
 - Hidden Windows background runner and watchdog scheduled tasks.
 - Linux installer with systemd user service support.
+- Beginner Ubuntu bootstrap script for apt dependencies, optional swap,
+  Node.js 22, Codex, cc-connect, and repository clone/update.
 - Optional Linux Codex API balance rotation from cc-switch providers that expose an OpenAI-compatible usage endpoint.
 - Platform-layer working indicator through Feishu `reaction_emoji = "OnIt"`.
 - Platform-layer image generation commands: `/画图`, `/生图`, `/img`, `画图`, and `生图`.
@@ -88,6 +90,14 @@ Install `cc-connect`:
 ```powershell
 npm install -g cc-connect
 cc-connect --version
+```
+
+Fresh Ubuntu bootstrap:
+
+```bash
+sudo bash ./scripts/bootstrap-linux.sh --checkout-dir /opt/codex-feishu
+cd /opt/codex-feishu
+bash ./scripts/install-linux.sh
 ```
 
 ## Feishu Apps

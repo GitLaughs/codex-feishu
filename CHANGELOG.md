@@ -7,6 +7,25 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-24
+
+### Added
+
+- Added `scripts/bootstrap-linux.sh` as a beginner Ubuntu bootstrap script for
+  apt dependencies, optional swap, Node.js 22, pinned Codex/cc-connect global
+  installs, and clone/update of the public repository.
+- Added v0.8.0 release notes covering the cloud Linux baseline and install
+  workflow split between host bootstrap and Feishu credential configuration.
+
+### Changed
+
+- Updated Linux documentation and README install guidance to point beginners at
+  `bootstrap-linux.sh` before running the interactive `install-linux.sh`.
+- Clarified that bootstrap never writes Feishu app secrets, API keys, user IDs,
+  group IDs, or generated cc-connect runtime config.
+- Made Linux smoke tests choose `python3` or `python` so Git Bash environments
+  with a broken `python3` alias can still validate scripts.
+
 ## [0.7.0] - 2026-05-24
 
 ### Added
