@@ -45,7 +45,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
 - 新手 Ubuntu bootstrap 脚本可自动准备 apt 依赖、swap、Node.js 22、Codex、cc-connect，并 clone/update 仓库。
-- Linux 可选安装 Codex API 余额轮询：从 cc-switch 中兼容 OpenAI API 的 provider 里按余额选择可用 key，写入 Codex auth，默认每 30 分钟检查一次。
+- Linux 可选安装 Codex API 余额轮询：从 cc-switch 中兼容 OpenAI API 的 provider 里按余额选择可用 key，写入 Codex auth；主池不足或报错时可切到通用 fallback provider。
 - 机器人决定处理消息时先给原消息加 `OnIt` / workingonit 表情 reaction；mini 静默时不加额外回复。
 - 支持平台层画图命令：`/画图`、`/生图`、`/img`、`画图`、`生图`。
 - 可选家庭记忆捕获：把明确的“记住 / 待办 / 购物 / 查记忆”消息写到工作区本地 `memory` 文件。
@@ -221,10 +221,26 @@ Linux 可选开启 Codex API 余额轮询：
 bash ./scripts/install-linux.sh \
   --enable-codex-balance-rotate \
   --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
-  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+  --codex-rotate-auth-path "$HOME/.codex/auth.json" \
+  --codex-rotate-min-balance 20 \
+  --codex-rotate-fallback-min-balance 0
 ```
 
-轮询脚本只负责选择当前余额最高且 `/v1/usage` 可用的 cc-switch provider，并写入 Codex auth。provider 不固定为某个服务名，只要兼容预期的 OpenAI API usage 返回即可。warmup 默认先试 Responses API；如果 provider 明确不支持 Responses，会自动改用 chat completions warmup。它不做单条消息失败后的自动重试；如果一次回答撞上余额或服务错误，用户重新发送即可使用下一次轮询/切换后的 key。
+轮询脚本会从 cc-switch provider 中选择余额最高且达到主池阈值的 key，并写入 Codex auth/config。所有主池 provider 都低于阈值或不可用时，脚本会检查通用 fallback provider 文件。Linux 安装器在启用余额轮询时默认一起注册失败 watchdog：近期日志出现额度、鉴权、限流或上游错误时，会排除当前 key 再切换一次，并重启 cc-connect user service。
+
+fallback provider 文件示例：
+
+```json
+{
+  "name": "backup-provider",
+  "base_url": "https://example.invalid/v1",
+  "key": "sk-...",
+  "model": "gpt-5.5",
+  "warmup_api": "chat"
+}
+```
+
+provider 不固定为某个服务名，只要兼容预期的 OpenAI API usage/generation 返回即可。warmup 默认先试 Responses API；如果 provider 明确不支持 Responses，会自动改用 chat completions warmup。
 
 ## 画图命令
 

@@ -7,7 +7,7 @@
 - 你想把 `cc-connect` 长期跑在 Linux 主机上。
 - 你希望用 systemd user service 后台运行。
 - 你仍然需要和 Windows 版相同的双机器人流程：mini 全量监听、deep 只处理 @、回复链隔离、`/help`、`/dream`、文件归档和健康检查。
-- 你可以选择接入 cc-switch 的 provider 余额轮询，让 Codex 新会话默认使用当前余额最高的可用 API。
+- 你可以选择接入 cc-switch 的 provider 余额轮询，让 Codex 新会话默认使用当前余额最高的可用 API；主池不足或报错时切到通用 fallback provider。
 - 你可以选择启用家庭记忆捕获，把明确的记忆、待办、购物消息写入本地工作区。
 
 ## 安装依赖
@@ -107,7 +107,9 @@ bash ./scripts/install-linux.sh --no-systemd
 bash ./scripts/install-linux.sh \
   --enable-codex-balance-rotate \
   --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
-  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+  --codex-rotate-auth-path "$HOME/.codex/auth.json" \
+  --codex-rotate-min-balance 20 \
+  --codex-rotate-fallback-min-balance 0
 ```
 
 安装器会创建：
@@ -115,14 +117,19 @@ bash ./scripts/install-linux.sh \
 ```text
 ~/.config/systemd/user/codex-feishu-codex-balance-rotate.service
 ~/.config/systemd/user/codex-feishu-codex-balance-rotate.timer
+~/.config/systemd/user/codex-feishu-codex-failure-watchdog.service
+~/.config/systemd/user/codex-feishu-codex-failure-watchdog.timer
 ```
 
-默认每 30 分钟运行一次，读取 cc-switch 数据库中的 Codex provider，调用 `/v1/usage` 查询余额，并把余额最高的有效 key 写入：
+默认每 30 分钟运行一次余额轮询，读取 cc-switch 数据库中的 Codex provider，调用 `/v1/usage` 查询余额，并把余额最高且超过主池阈值的有效 key 写入：
 
 - `--codex-rotate-env-path`，默认是仓库目录下的 `codex.env`
 - `--codex-rotate-auth-path`，默认是 `$HOME/.codex/auth.json`
 - `--codex-rotate-config-path`，默认是 `$HOME/.codex/config.toml`
 - `--codex-rotate-fallback-file`，默认是 `$HOME/.cc-switch/codex-fallback-providers.json`
+- `--codex-rotate-min-balance`，主池最低余额阈值
+- `--codex-rotate-fallback-min-balance`，fallback 池最低余额阈值
+- `--disable-codex-failure-watchdog`，只保留定时轮询，不注册失败 watchdog
 
 warmup 默认先请求 Responses API；如果 provider 返回不支持 Responses，会自动改用 chat completions 做 warmup，再查询 `/v1/usage`。也可以在 fallback 文件里显式写：
 
@@ -144,7 +151,7 @@ bash ./scripts/install-linux.sh \
   --codex-rotate-interval "*:0/15"
 ```
 
-这套逻辑不做单条消息失败后的自动重试。如果某次回答因为余额或上游错误失败，让用户重新发送即可。
+失败 watchdog 默认每分钟检查 cc-connect 日志。近期出现额度不足、鉴权失败、限流或上游错误时，它会用 `--exclude-current` 触发一次切换，并重启 cc-connect user service。这个动作只影响后续新请求；已失败的那条消息不会被自动重放。
 
 ## 家庭记忆捕获
 

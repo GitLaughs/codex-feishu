@@ -63,7 +63,7 @@ flowchart LR
 - Linux installer with systemd user service support.
 - Beginner Ubuntu bootstrap script for apt dependencies, optional swap,
   Node.js 22, Codex, cc-connect, and repository clone/update.
-- Optional Linux Codex API balance rotation from cc-switch providers that expose an OpenAI-compatible usage endpoint.
+- Optional Linux Codex API balance rotation from cc-switch providers that expose an OpenAI-compatible usage endpoint, with a generic fallback provider file and failure watchdog.
 - Platform-layer working indicator through Feishu `reaction_emoji = "OnIt"`.
 - Platform-layer image generation commands: `/画图`, `/生图`, `/img`, `画图`, and `生图`.
 - Optional family memory capture hook for workspace-local household memory, tasks, and shopping lists.
@@ -194,10 +194,26 @@ Optional Linux Codex API balance rotation:
 bash ./scripts/install-linux.sh \
   --enable-codex-balance-rotate \
   --codex-rotate-db-path "$HOME/.cc-switch/cc-switch.db" \
-  --codex-rotate-auth-path "$HOME/.codex/auth.json"
+  --codex-rotate-auth-path "$HOME/.codex/auth.json" \
+  --codex-rotate-min-balance 20 \
+  --codex-rotate-fallback-min-balance 0
 ```
 
-The rotation script checks configured cc-switch providers through `/v1/usage`, selects the highest positive remaining balance, and writes the selected key to Codex auth. It is provider-agnostic as long as the provider exposes the expected OpenAI-compatible usage response. Warmup uses the Responses API first and falls back to chat completions when the provider reports that Responses is unsupported. It does not retry a failed in-flight chat request; users can resend after the next key switch.
+The rotation script checks configured cc-switch providers through `/v1/usage`, selects the highest remaining balance above the primary threshold, and writes the selected key to Codex auth and config. If every primary provider is below threshold or unavailable, it checks a generic fallback provider file. The Linux installer also registers a failure watchdog by default when balance rotation is enabled; recent quota, auth, rate-limit, or upstream failures trigger a rotate-with-exclude-current pass and restart the cc-connect service.
+
+Fallback provider file example:
+
+```json
+{
+  "name": "backup-provider",
+  "base_url": "https://example.invalid/v1",
+  "key": "sk-...",
+  "model": "gpt-5.5",
+  "warmup_api": "chat"
+}
+```
+
+The rotation logic is provider-agnostic as long as providers expose the expected OpenAI-compatible usage and generation endpoints. Warmup uses the Responses API first and falls back to chat completions when the provider reports that Responses is unsupported.
 
 Linux non-interactive install:
 

@@ -1,22 +1,21 @@
-# codex-feishu v0.8.0｜Linux 新手安装和云端发行说明
+# codex-feishu v0.8.1｜Codex 余额轮询和失败切换
 
-Adds a beginner-friendly Ubuntu bootstrap path and release documentation for the current cloud Linux deployment baseline.
+Adds generic Codex provider rotation hardening for Feishu/Lark group bots, without publishing local provider names, keys, or machine paths.
 
-中文关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、群聊记忆、文件检索、工作区健康检查、Codex 群机器人、cc-connect 部署。
+中文关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、Codex 余额轮询、失败切换、fallback provider、cc-connect 部署。
 
 ## Highlights
 
-- New `scripts/bootstrap-linux.sh` prepares a fresh Ubuntu host for codex-feishu.
-- Bootstrap installs apt dependencies, optional swap, Node.js 22, pinned `@openai/codex@0.133.0`, and pinned `cc-connect@1.3.3-beta.2`.
-- Bootstrap can clone or update `https://github.com/GitLaughs/codex-feishu.git`, then hands off to `scripts/install-linux.sh`.
-- Linux install docs now separate host bootstrap from Feishu app credentials and runtime config generation.
-- Changelog and docs record the current cloud Linux baseline while keeping private server config out of the public repo.
+- `codex-balance-rotate.py` now supports separate primary and fallback balance thresholds.
+- Fallback providers are generic OpenAI-compatible entries loaded from a local JSON file that is never committed.
+- New `codex-failure-watchdog.py` watches cc-connect logs for quota, auth, rate-limit, and upstream errors, then rotates away from the current key.
+- Linux installer registers the failure watchdog timer by default when balance rotation is enabled.
+- Healthcheck fallback proxy service name is configurable and no longer bakes in a local provider name.
+- Builds on the v0.8.0 beginner Ubuntu bootstrap path without changing its no-secrets boundary.
 
 ## Required Runtime
 
-This release packages deployment templates and helper scripts. The beginner bootstrap targets Ubuntu hosts and installs Node.js 22 plus Python 3. Deterministic commands remain normal cc-connect `[[commands]]` entries and require Python on the host. Image commands still require a runtime that supports Feishu `image_command_enabled`, `image_script`, `image_workspace`, `image_timeout_secs`, and `image_triggers` platform options.
-
-Bootstrap does not write Feishu app secrets, OpenAI-compatible API keys, user IDs, group IDs, or generated cc-connect config. Run `scripts/install-linux.sh` after bootstrap to configure a real Feishu deployment.
+This release packages deployment templates and helper scripts. Codex provider rotation requires Python, a cc-switch SQLite database, and providers with compatible OpenAI-style generation plus `/v1/usage` endpoints. The failure watchdog expects systemd journal access for the cc-connect service. Bootstrap still does not write Feishu app secrets, OpenAI-compatible API keys, user IDs, group IDs, or generated cc-connect config.
 
 ## Verify
 

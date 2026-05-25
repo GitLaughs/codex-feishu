@@ -7,6 +7,19 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-05-25
+
+### Added
+
+- Added a generic Codex failure watchdog that watches cc-connect logs for quota, auth, rate-limit, and upstream errors, then rotates away from the current provider.
+- Linux installer now registers the failure watchdog timer by default when Codex balance rotation is enabled.
+- Codex balance rotation now supports separate primary and fallback minimum-balance thresholds.
+
+### Changed
+
+- Public docs describe provider rotation through generic OpenAI-compatible primary and fallback providers, without local service names or machine paths.
+- Server healthcheck now uses a configurable generic fallback proxy service name.
+
 ## [0.8.0] - 2026-05-24
 
 ### Added

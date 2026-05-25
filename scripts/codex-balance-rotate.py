@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import argparse
+import contextlib
 import json
 import os
 import pathlib
 import sqlite3
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -15,6 +17,7 @@ DEFAULT_ENV = "/etc/codex-feishu.env"
 DEFAULT_AUTH = os.path.expanduser("~/.codex/auth.json")
 DEFAULT_CODEX_CONFIG = os.path.expanduser("~/.codex/config.toml")
 DEFAULT_FALLBACK_FILE = os.path.expanduser("~/.cc-switch/codex-fallback-providers.json")
+DEFAULT_LOCK_FILE = os.path.expanduser("~/.cc-switch/codex-balance-rotate.lock")
 DEFAULT_SERVICE = "cc-connect"
 PRIMARY_MODEL = "gpt-5.5"
 
@@ -28,10 +31,22 @@ def parse_args():
     parser.add_argument("--auth", default=DEFAULT_AUTH)
     parser.add_argument("--codex-config", default=DEFAULT_CODEX_CONFIG)
     parser.add_argument("--fallback-file", default=DEFAULT_FALLBACK_FILE)
+    parser.add_argument("--lock-file", default=DEFAULT_LOCK_FILE)
     parser.add_argument("--service", default=DEFAULT_SERVICE)
     parser.add_argument("--restart-service", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--min-balance", type=float, default=0.0)
+    parser.add_argument(
+        "--min-balance",
+        type=float,
+        default=float(os.environ.get("CODEX_FEISHU_CODEX_MIN_BALANCE", "0")),
+        help="Minimum remaining balance for primary cc-switch providers.",
+    )
+    parser.add_argument(
+        "--fallback-min-balance",
+        type=float,
+        default=float(os.environ.get("CODEX_FEISHU_CODEX_FALLBACK_MIN_BALANCE", "0")),
+        help="Minimum remaining balance for fallback-file providers.",
+    )
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument("--no-warmup", action="store_true")
     parser.add_argument("--exclude-current", action="store_true")
@@ -144,7 +159,11 @@ def load_file_fallback(path):
     p = pathlib.Path(path)
     if not p.exists():
         return []
-    data = json.loads(p.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"warning: skip invalid fallback provider file {p}: {type(exc).__name__}", file=sys.stderr)
+        return []
     if isinstance(data, dict):
         data = [data]
     providers = []
@@ -279,8 +298,12 @@ def query_usage(provider, timeout, warmup=True):
         with urllib.request.urlopen(req, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8", errors="replace"))
     except urllib.error.HTTPError as exc:
+        if provider.get("kind") == "fallback" and exc.code not in {401, 403}:
+            return {"ok": True, "remaining": 0.0, "valid": True, "balance_note": f"usage unavailable: http {exc.code}"}
         return {"ok": False, "error": f"http {exc.code}: {exc.reason}"}
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        if provider.get("kind") == "fallback":
+            return {"ok": True, "remaining": 0.0, "valid": True, "balance_note": "usage unavailable after warmup"}
         return {"ok": False, "error": str(exc)}
 
     remaining = first_number(
@@ -348,7 +371,50 @@ def normalize_valid(value):
     return True
 
 
-def read_current_key(env_path):
+@contextlib.contextmanager
+def rotation_lock(path):
+    lock_path = pathlib.Path(path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+    handle = os.fdopen(fd, "w", encoding="utf-8")
+    try:
+        if os.name == "posix":
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        if os.name == "posix":
+            try:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+        handle.close()
+
+
+def atomic_write_text(path, text, mode=0o600):
+    target = pathlib.Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp = target.with_name(f".{target.name}.tmp-{os.getpid()}-{time.time_ns()}")
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, target)
+        os.chmod(target, mode)
+    except Exception:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+        raise
+
+
+def read_env_key(env_path):
     try:
         for line in pathlib.Path(env_path).read_text(encoding="utf-8").splitlines():
             if line.startswith("OPENAI_API_KEY="):
@@ -356,6 +422,23 @@ def read_current_key(env_path):
     except FileNotFoundError:
         return None
     return None
+
+
+def read_auth_key(auth_path):
+    try:
+        data = json.loads(pathlib.Path(auth_path).read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    value = data.get("OPENAI_API_KEY") if isinstance(data, dict) else None
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def current_keys(env_path, auth_path):
+    keys = []
+    for key in (read_env_key(env_path), read_auth_key(auth_path)):
+        if key and key not in keys:
+            keys.append(key)
+    return keys
 
 
 def write_env_key(env_path, key):
@@ -371,15 +454,12 @@ def write_env_key(env_path, key):
             break
     if not found:
         lines.append("OPENAI_API_KEY=" + key)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
+    atomic_write_text(path, "\n".join(lines) + "\n")
 
 
 def write_auth_key(auth_path, key):
     path = pathlib.Path(auth_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"OPENAI_API_KEY": key}, indent=2) + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
+    atomic_write_text(path, json.dumps({"OPENAI_API_KEY": key}, indent=2) + "\n")
 
 
 def patch_assignment(lines, key, value):
@@ -418,8 +498,7 @@ def write_codex_config(config_path, provider):
         if in_openai and stripped.startswith("base_url"):
             lines[i] = f'base_url = "{base_url.rstrip("/")}"'
             break
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
+    atomic_write_text(path, "\n".join(lines) + "\n")
 
 
 def mark_current_provider(db_path, provider_id):
@@ -435,10 +514,11 @@ def mark_current_provider(db_path, provider_id):
         conn.close()
 
 
-def filter_excluded(providers, current_key, exclude_current):
-    if not exclude_current or not current_key:
+def filter_excluded(providers, active_keys, exclude_current):
+    if not exclude_current or not active_keys:
         return providers
-    return [item for item in providers if item.get("key") != current_key]
+    active = set(active_keys)
+    return [item for item in providers if item.get("key") not in active]
 
 
 def evaluate(providers, timeout, min_balance, warmup):
@@ -456,62 +536,69 @@ def evaluate(providers, timeout, min_balance, warmup):
 
 
 def restart_service(service):
-    subprocess.run(["systemctl", "restart", service], check=True)
+    cmd = os.environ.get("CODEX_FEISHU_RESTART_COMMAND")
+    if cmd:
+        subprocess.run(cmd, shell=True, check=True)
+        return
+    systemctl = ["systemctl"]
+    if os.environ.get("CODEX_FEISHU_SYSTEMD_USER", "").lower() in {"1", "true", "yes"}:
+        systemctl.append("--user")
+    subprocess.run(systemctl + ["restart", service], check=True)
 
 
 def main():
     args = parse_args()
-    all_db_providers = load_providers(args.db)
-    primary_providers = [p for p in all_db_providers if not p.get("file_fallback")]
-    fallback_providers = []
-    fallback_providers.extend(load_file_fallback(args.fallback_file))
-    if not primary_providers and not fallback_providers:
-        raise SystemExit("no Codex providers found in CC Switch DB or fallback file")
+    with rotation_lock(args.lock_file):
+        all_db_providers = load_providers(args.db)
+        primary_providers = [p for p in all_db_providers if not p.get("file_fallback")]
+        fallback_providers = load_file_fallback(args.fallback_file)
+        if not primary_providers and not fallback_providers:
+            raise SystemExit("no Codex providers found in CC Switch DB or fallback file")
 
-    current_key = read_current_key(args.env)
-    primary_pool = filter_excluded(primary_providers, current_key, args.exclude_current)
-    fallback_pool = filter_excluded(fallback_providers, current_key, args.exclude_current)
+        active_keys = current_keys(args.env, args.auth)
+        primary_pool = filter_excluded(primary_providers, active_keys, args.exclude_current)
+        fallback_pool = filter_excluded(fallback_providers, active_keys, args.exclude_current)
 
-    results = []
-    candidates = []
-    if not args.force_fallback:
-        primary_results, primary_candidates = evaluate(
-            primary_pool, args.timeout, args.min_balance, warmup=not args.no_warmup
-        )
-        results.extend(primary_results)
-        candidates = primary_candidates
+        results = []
+        candidates = []
+        if not args.force_fallback:
+            primary_results, primary_candidates = evaluate(
+                primary_pool, args.timeout, args.min_balance, warmup=not args.no_warmup
+            )
+            results.extend(primary_results)
+            candidates = primary_candidates
 
-    if not candidates:
-        fallback_results, fallback_candidates = evaluate(
-            fallback_pool, args.timeout, args.min_balance, warmup=not args.no_warmup
-        )
-        results.extend(fallback_results)
-        candidates = fallback_candidates
-    if not candidates:
-        print("No valid primary or fallback provider with positive balance; keeping current key.")
+        if not candidates:
+            fallback_results, fallback_candidates = evaluate(
+                fallback_pool, args.timeout, args.fallback_min_balance, warmup=not args.no_warmup
+            )
+            results.extend(fallback_results)
+            candidates = fallback_candidates
+        if not candidates:
+            print("No valid primary or fallback provider with sufficient balance; keeping current key.")
+            for item in results:
+                print_status(item)
+            return 2
+
+        selected = candidates[0]
+        changed = selected["key"] not in active_keys
+
         for item in results:
-            print_status(item)
-        return 2
+            print_status(item, selected["id"])
+        print(f"Selected provider: {selected['name']} ({selected['id']}), changed={changed}")
 
-    selected = candidates[0]
-    changed = current_key != selected["key"]
+        if args.dry_run:
+            return 0
 
-    for item in results:
-        print_status(item, selected["id"])
-    print(f"Selected provider: {selected['name']} ({selected['id']}), changed={changed}")
-
-    if args.dry_run:
+        write_env_key(args.env, selected["key"])
+        write_auth_key(args.auth, selected["key"])
+        write_codex_config(args.codex_config, selected)
+        if not selected.get("file_fallback"):
+            mark_current_provider(args.db, selected["id"])
+        if changed and args.restart_service:
+            restart_service(args.service)
+            print(f"Restarted service: {args.service}")
         return 0
-
-    write_env_key(args.env, selected["key"])
-    write_auth_key(args.auth, selected["key"])
-    write_codex_config(args.codex_config, selected)
-    if not selected.get("file_fallback"):
-        mark_current_provider(args.db, selected["id"])
-    if changed and args.restart_service:
-        restart_service(args.service)
-        print(f"Restarted service: {args.service}")
-    return 0
 
 
 def print_status(item, selected_id=None):

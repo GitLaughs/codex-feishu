@@ -7,6 +7,7 @@ CC_LOG="${CODEX_FEISHU_CC_LOG:-/var/log/cc-connect.log}"
 MIN_AVAILABLE_MB="${CODEX_FEISHU_MIN_AVAILABLE_MB:-300}"
 MAX_DISK_USE_PCT="${CODEX_FEISHU_MAX_DISK_USE_PCT:-80}"
 EXPECTED_PROJECTS="${CODEX_FEISHU_EXPECTED_PROJECTS:-9}"
+FALLBACK_PROXY_SERVICE="${CODEX_FEISHU_FALLBACK_PROXY_SERVICE:-}"
 
 json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/' | tr -d '\n' | sed 's/\\n$//'
@@ -22,12 +23,17 @@ service_state() {
 }
 
 cc_state="$(service_state cc-connect.service)"
-mimo_state="$(service_state mimo-responses-proxy.service)"
+fallback_proxy_state="not_configured"
+if [[ -n "$FALLBACK_PROXY_SERVICE" ]]; then
+  fallback_proxy_state="$(service_state "$FALLBACK_PROXY_SERVICE")"
+fi
 watchdog_timer="$(service_state codex-failure-watchdog.timer)"
 rotate_timer="$(service_state codex-balance-rotate.timer)"
 
 [[ "$cc_state" == "active" ]] || add_failure "cc-connect.service is $cc_state"
-[[ "$mimo_state" == "active" ]] || add_failure "mimo-responses-proxy.service is $mimo_state"
+if [[ -n "$FALLBACK_PROXY_SERVICE" && "$fallback_proxy_state" != "active" ]]; then
+  add_failure "$FALLBACK_PROXY_SERVICE is $fallback_proxy_state"
+fi
 [[ "$watchdog_timer" == "active" ]] || add_failure "codex-failure-watchdog.timer is $watchdog_timer"
 [[ "$rotate_timer" == "active" ]] || add_failure "codex-balance-rotate.timer is $rotate_timer"
 [[ -d "$PROJECT_ROOT" ]] || add_failure "missing project root: $PROJECT_ROOT"
@@ -68,7 +74,7 @@ report="$(cat <<JSON
   "ok": $ok,
   "services": {
     "cc_connect": "$cc_state",
-    "mimo_responses_proxy": "$mimo_state",
+    "fallback_responses_proxy": "$fallback_proxy_state",
     "codex_failure_watchdog_timer": "$watchdog_timer",
     "codex_balance_rotate_timer": "$rotate_timer"
   },

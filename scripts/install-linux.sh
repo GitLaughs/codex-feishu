@@ -34,6 +34,10 @@ codex_rotate_config_path="${HOME}/.codex/config.toml"
 codex_rotate_fallback_file="${HOME}/.cc-switch/codex-fallback-providers.json"
 codex_rotate_interval="*:0/30"
 codex_rotate_min_balance="0"
+codex_rotate_fallback_min_balance="0"
+codex_failure_watchdog=0
+codex_failure_watchdog_interval="*:0/1"
+codex_failure_watchdog_state_path=""
 codex_rotate_extra_args=()
 
 while [[ $# -gt 0 ]]; do
@@ -71,6 +75,11 @@ while [[ $# -gt 0 ]]; do
     --codex-rotate-fallback-file) codex_rotate_fallback_file="$2"; shift 2 ;;
     --codex-rotate-interval) codex_rotate_interval="$2"; shift 2 ;;
     --codex-rotate-min-balance) codex_rotate_min_balance="$2"; shift 2 ;;
+    --codex-rotate-fallback-min-balance) codex_rotate_fallback_min_balance="$2"; shift 2 ;;
+    --enable-codex-failure-watchdog) codex_failure_watchdog=1; shift ;;
+    --disable-codex-failure-watchdog) codex_failure_watchdog=-1; shift ;;
+    --codex-failure-watchdog-interval) codex_failure_watchdog_interval="$2"; shift 2 ;;
+    --codex-failure-watchdog-state-path) codex_failure_watchdog_state_path="$2"; shift 2 ;;
     --codex-rotate-no-warmup) codex_rotate_extra_args+=("--no-warmup"); shift ;;
     --codex-rotate-exclude-current) codex_rotate_extra_args+=("--exclude-current"); shift ;;
     --codex-rotate-force-fallback) codex_rotate_extra_args+=("--force-fallback"); shift ;;
@@ -166,6 +175,12 @@ fi
 if [[ -z "$codex_rotate_env_path" ]]; then
   codex_rotate_env_path="${install_root}/codex.env"
 fi
+if [[ -z "$codex_failure_watchdog_state_path" ]]; then
+  codex_failure_watchdog_state_path="${install_root}/codex-failure-watchdog.state"
+fi
+if [[ "$enable_codex_balance_rotate" -eq 1 && "$codex_failure_watchdog" -eq 0 ]]; then
+  codex_failure_watchdog=1
+fi
 
 echo "codex-feishu Linux installer"
 echo "Install root: ${install_root}"
@@ -244,7 +259,7 @@ if [[ "$enable_family_memory" -eq 1 ]]; then
   chmod +x "$workspace_path/scripts/cc-connect-memory-hook.sh" "$workspace_path/scripts/family-memory-capture.py" 2>/dev/null || true
   mkdir -p "$workspace_path/memory/messages" "$workspace_path/memory/people" "$workspace_path/memory/family" "$workspace_path/memory/summaries"
 fi
-chmod +x "$install_root/scripts/codex-balance-rotate.py" 2>/dev/null || true
+chmod +x "$install_root/scripts/codex-balance-rotate.py" "$install_root/scripts/codex-failure-watchdog.py" 2>/dev/null || true
 
 instructions="$(<"$install_root/templates/INSTRUCTIONS.md")"
 instructions="$(replace_token "$instructions" "__MINI_PROJECT__" "$mini_project")"
@@ -354,7 +369,7 @@ EOF
     if [[ "$enable_codex_balance_rotate" -eq 1 ]]; then
       rotate_service_path="${service_dir}/${codex_rotate_service_name}.service"
       rotate_timer_path="${service_dir}/${codex_rotate_service_name}.timer"
-      mkdir -p "$(dirname "$codex_rotate_env_path")" "$(dirname "$codex_rotate_auth_path")" "$(dirname "$codex_rotate_config_path")" "$(dirname "$codex_rotate_fallback_file")"
+      mkdir -p "$(dirname "$codex_rotate_env_path")" "$(dirname "$codex_rotate_auth_path")" "$(dirname "$codex_rotate_config_path")" "$(dirname "$codex_rotate_fallback_file")" "$(dirname "$codex_failure_watchdog_state_path")"
       codex_rotate_extra=""
       if [[ "${#codex_rotate_extra_args[@]}" -gt 0 ]]; then
         for arg in "${codex_rotate_extra_args[@]}"; do
@@ -369,7 +384,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env python3 "$(systemd_escape "$install_root")/scripts/codex-balance-rotate.py" --db "$(systemd_escape "$codex_rotate_db_path")" --env "$(systemd_escape "$codex_rotate_env_path")" --auth "$(systemd_escape "$codex_rotate_auth_path")" --codex-config "$(systemd_escape "$codex_rotate_config_path")" --fallback-file "$(systemd_escape "$codex_rotate_fallback_file")" --min-balance ${codex_rotate_min_balance}${codex_rotate_extra}
+Environment=CODEX_FEISHU_SYSTEMD_USER=1
+ExecStart=/usr/bin/env python3 "$(systemd_escape "$install_root")/scripts/codex-balance-rotate.py" --db "$(systemd_escape "$codex_rotate_db_path")" --env "$(systemd_escape "$codex_rotate_env_path")" --auth "$(systemd_escape "$codex_rotate_auth_path")" --codex-config "$(systemd_escape "$codex_rotate_config_path")" --fallback-file "$(systemd_escape "$codex_rotate_fallback_file")" --service "${service_name}.service" --min-balance ${codex_rotate_min_balance} --fallback-min-balance ${codex_rotate_fallback_min_balance}${codex_rotate_extra}
 EOF
       cat >"$rotate_timer_path" <<EOF
 [Unit]
@@ -387,6 +403,39 @@ EOF
       systemctl --user daemon-reload
       systemctl --user enable --now "${codex_rotate_service_name}.timer"
       echo "Registered Codex balance rotation timer: ${codex_rotate_service_name}.timer"
+
+      if [[ "$codex_failure_watchdog" -eq 1 ]]; then
+        watchdog_service_name="${codex_rotate_service_name%-balance-rotate}-failure-watchdog"
+        watchdog_service_path="${service_dir}/${watchdog_service_name}.service"
+        watchdog_timer_path="${service_dir}/${watchdog_service_name}.timer"
+        cat >"$watchdog_service_path" <<EOF
+[Unit]
+Description=codex-feishu Codex provider failure watchdog
+After=network-online.target ${service_name}.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=CODEX_FEISHU_SYSTEMD_USER=1
+ExecStart=/usr/bin/env python3 "$(systemd_escape "$install_root")/scripts/codex-failure-watchdog.py" --state "$(systemd_escape "$codex_failure_watchdog_state_path")" --rotate-script "$(systemd_escape "$install_root")/scripts/codex-balance-rotate.py" --service "${service_name}.service" --systemd-user --min-balance ${codex_rotate_min_balance} --fallback-min-balance ${codex_rotate_fallback_min_balance} --restart-service
+EOF
+        cat >"$watchdog_timer_path" <<EOF
+[Unit]
+Description=Run codex-feishu Codex provider failure watchdog
+
+[Timer]
+OnBootSec=3min
+OnCalendar=${codex_failure_watchdog_interval}
+Persistent=true
+RandomizedDelaySec=20
+
+[Install]
+WantedBy=timers.target
+EOF
+        systemctl --user daemon-reload
+        systemctl --user enable --now "${watchdog_service_name}.timer"
+        echo "Registered Codex failure watchdog timer: ${watchdog_service_name}.timer"
+      fi
     fi
   else
     echo "systemctl not found; run scripts/start-cc-connect.sh manually or use --no-systemd" >&2
