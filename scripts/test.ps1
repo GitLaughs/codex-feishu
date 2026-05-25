@@ -84,7 +84,7 @@ if ($bashUsable) {
 Write-Host "== Python parse check =="
 $python = Get-Command python -ErrorAction SilentlyContinue
 if ($python) {
-    $pyFiles = Get-ChildItem -LiteralPath (Join-Path $Root "scripts") -Filter *.py
+    $pyFiles = Get-ChildItem -LiteralPath (Join-Path $Root "scripts") -Recurse -Filter *.py
     $pyArgs = @("-m", "py_compile") + ($pyFiles | ForEach-Object { $_.FullName })
     $output = & $python.Source @pyArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -166,7 +166,7 @@ try {
         $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8
         if (!$config.Contains('name = "help"')) { Add-Failure "Install smoke did not generate /help command." }
         if (!$config.Contains('name = "dream"')) { Add-Failure "Install smoke did not generate /dream command." }
-        foreach ($commandName in "files","memfind","knowledge","tasks","workspace-info","status-index","health-codex-feishu") {
+        foreach ($commandName in "files","memfind","knowledge","tasks","task","workspace-info","status-index","health-codex-feishu") {
             if (!$config.Contains("name = `"$commandName`"")) {
                 Add-Failure "Install smoke did not generate /$commandName command."
             }
@@ -198,6 +198,9 @@ try {
         if (!$config.Contains("cc-connect-memory-hook.ps1")) {
             Add-Failure "Install smoke did not generate optional family memory hook."
         }
+        if (!$config.Contains("cc-connect-lark-events-hook.py")) {
+            Add-Failure "Install smoke did not generate lark event capture hook."
+        }
     }
     $instructionsPath = Join-Path $workspace "INSTRUCTIONS.md"
     if (!(Test-Path -LiteralPath $instructionsPath)) {
@@ -217,9 +220,14 @@ try {
             Add-Failure "Install smoke did not copy $scriptName."
         }
     }
-    foreach ($scriptName in "codex-feishu-index.py","codex-feishu-command.py","codex-feishu-health-command.py","codex-feishu-file-health.py","codex-feishu-memory-health.py","codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-redact-runs.py","codex-feishu-reindex.ps1") {
+    foreach ($scriptName in "codex-feishu-index.py","codex-feishu-command.py","codex-feishu-health-command.py","codex-feishu-file-health.py","codex-feishu-memory-health.py","codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-redact-runs.py","codex-feishu-reindex.ps1","memory-recall.ps1","task-agent.py","create-feishu-reminder.py","delete-feishu-reminder.py","memory-curator.py","capture-private-message.py","cc-connect-lark-events-hook.py","codex-feishu-group-sense.py","codex-feishu-heartbeat-sense.py","build-feishu-private-packet.py","build-feishu-group-packet.py","build-feishu-dream-packet.py","build-feishu-recall-packet.py") {
         if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\$scriptName"))) {
             Add-Failure "Install smoke did not copy deterministic command script $scriptName."
+        }
+    }
+    foreach ($scriptName in "evidence_packet.py","task_intent_router.py") {
+        if (!(Test-Path -LiteralPath (Join-Path $workspace "scripts\lib\$scriptName"))) {
+            Add-Failure "Install smoke did not copy scripts/lib/$scriptName."
         }
     }
     foreach ($scriptName in "family-memory-capture.ps1","family-memory-capture.py","cc-connect-memory-hook.ps1","test-family-memory.ps1","test-family-memory-hook.ps1") {
@@ -256,6 +264,12 @@ try {
         } else {
             Write-Host "OK   codex-feishu health command"
         }
+        $taskPreviewOutput = & $python.Source (Join-Path $workspace "scripts\codex-feishu-command.py") --root $workspace /task preview "每天晚上9点提醒我检查服务状态" 2>&1
+        if ($LASTEXITCODE -ne 0 -or (($taskPreviewOutput | Out-String) -notmatch "任务代理预览")) {
+            Add-Failure "codex-feishu /task preview failed in install smoke: $($taskPreviewOutput | Out-String)"
+        } else {
+            Write-Host "OK   codex-feishu /task preview"
+        }
     }
 }
 finally {
@@ -283,6 +297,19 @@ if ($bashUsable) {
         Add-Failure "Linux test wrapper failed: $($output | Out-String)"
     } else {
         Write-Host "OK   scripts/test-linux.sh"
+    }
+}
+
+Write-Host "== Focused Python workflow tests =="
+if ($python) {
+    foreach ($testScript in "test-task-agent.py","test-capture-private-message.py","test-cc-connect-lark-events-hook.py","test-feishu-evidence-packets.py") {
+        $testOutput = & $python.Source (Join-Path $Root "scripts\$testScript") 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Failure "$testScript failed: $($testOutput | Out-String)"
+            Write-Host "FAIL $testScript" -ForegroundColor Red
+        } else {
+            Write-Host "OK   $testScript"
+        }
     }
 }
 

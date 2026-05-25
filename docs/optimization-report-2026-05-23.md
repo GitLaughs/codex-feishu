@@ -3,7 +3,7 @@
 ## 已确认现状
 
 - 云端 `cc-connect.service` 正常运行。
-- Feishu 项目数为 9，覆盖私聊、项目群、汇报群、家庭群。
+- Feishu 项目数由部署环境决定，可覆盖私聊、项目群、汇报群和长期协作群等入口。
 - fallback Responses proxy、Codex 余额轮询 timer、失败 watchdog timer 正常。
 - 服务器资源偏紧：1.6GiB 内存，根分区 40G，当前用量约 51%。
 

@@ -1,21 +1,21 @@
-# codex-feishu v0.8.1｜Codex 余额轮询和失败切换
+# codex-feishu v0.9.0｜自然语言任务和记忆管理
 
-Adds generic Codex provider rotation hardening for Feishu/Lark group bots, without publishing local provider names, keys, or machine paths.
+Adds the core task-agent, memory-management, event-capture, and evidence-packet workflows to the public Feishu/Lark group bot release, without publishing local provider names, keys, private IDs, or machine paths.
 
-中文关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、Codex 余额轮询、失败切换、fallback provider、cc-connect 部署。
+中文关键词：飞书机器人、Lark 机器人、飞书群聊 Codex、自然语言任务代理、群聊记忆、evidence packet、cc-connect 部署。
 
 ## Highlights
 
-- `codex-balance-rotate.py` now supports separate primary and fallback balance thresholds.
-- Fallback providers are generic OpenAI-compatible entries loaded from a local JSON file that is never committed.
-- New `codex-failure-watchdog.py` watches cc-connect logs for quota, auth, rate-limit, and upstream errors, then rotates away from the current key.
-- Linux installer registers the failure watchdog timer by default when balance rotation is enabled.
-- Healthcheck fallback proxy service name is configurable and no longer bakes in a local provider name.
-- Builds on the v0.8.0 beginner Ubuntu bootstrap path without changing its no-secrets boundary.
+- `/task preview`, `/task run`, and `/task list` are now active commands in generated Windows and Linux configs.
+- `task-agent.py` parses reminders, weekly rotas, calendar deletion, file modification, script creation, and deploy/restart requests; only low-risk structured local state is executed automatically.
+- Redacted Feishu event capture writes compact group events into `memory/lark-events/` for later recall and `/dream` workflows.
+- New evidence packet builders cover private memory, group memory, dream maintenance, and recall results while avoiding raw JSON/NDJSON context dumps.
+- `memory-curator.py`, `codex-feishu-group-sense.py`, and `codex-feishu-heartbeat-sense.py` are included in installer-managed workspaces.
+- Public docs, templates, tests, and install scripts use generic examples only.
 
 ## Required Runtime
 
-This release packages deployment templates and helper scripts. Codex provider rotation requires Python, a cc-switch SQLite database, and providers with compatible OpenAI-style generation plus `/v1/usage` endpoints. The failure watchdog expects systemd journal access for the cc-connect service. Bootstrap still does not write Feishu app secrets, OpenAI-compatible API keys, user IDs, group IDs, or generated cc-connect config.
+This release packages deployment templates and helper scripts. `/task run` may write local task state and can create Feishu calendar reminders only when the local operator configures the required `lark-cli` identity. Bootstrap and installers still do not commit Feishu app secrets, OpenAI-compatible API keys, user IDs, group IDs, or generated cc-connect config.
 
 ## Verify
 
@@ -27,7 +27,8 @@ git diff --check
 Expected:
 
 - PowerShell parser, Python parser, and secret/local-data scan pass.
-- Windows install smoke generates workspace manifest, deterministic command config, reindex output, command isolation, and health checks.
+- Windows install smoke generates workspace manifest, deterministic command config, `/task` config, event hook config, reindex output, command isolation, and health checks.
+- Focused task-agent, private capture, event hook, and evidence packet tests pass.
 - Linux install checks run when a usable bash exists; otherwise they are skipped by the Windows test wrapper.
 
 ## Attribution

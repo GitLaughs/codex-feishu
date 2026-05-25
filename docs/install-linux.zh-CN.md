@@ -6,7 +6,7 @@
 
 - 你想把 `cc-connect` 长期跑在 Linux 主机上。
 - 你希望用 systemd user service 后台运行。
-- 你仍然需要和 Windows 版相同的双机器人流程：mini 全量监听、deep 只处理 @、回复链隔离、`/help`、`/dream`、文件归档和健康检查。
+- 你仍然需要和 Windows 版相同的双机器人流程：mini 全量监听、deep 只处理 @、回复链隔离、`/help`、`/dream`、`/task`、文件归档、记忆整理、事件捕获和健康检查。
 - 你可以选择接入 cc-switch 的 provider 余额轮询，让 Codex 新会话默认使用当前余额最高的可用 API；主池不足或报错时切到通用 fallback provider。
 - 你可以选择启用家庭记忆捕获，把明确的记忆、待办、购物消息写入本地工作区。
 
@@ -97,6 +97,12 @@ bash ./scripts/install-linux.sh \
 
 ```bash
 bash ./scripts/install-linux.sh --no-systemd
+```
+
+默认会启用脱敏事件捕获 hook，把群消息摘要写入 `memory/lark-events/`，供 `/dream`、`/memfind`、`codex-feishu-group-sense.py` 和 evidence packet 使用。如需关闭：
+
+```bash
+bash ./scripts/install-linux.sh --disable-event-capture
 ```
 
 ## Codex API 余额轮询
@@ -224,6 +230,16 @@ Linux 安装器会生成：
   - `lark-download-resource.sh`
   - `lark-event-listener.sh`
   - `lark-health.sh`
+  - `task-agent.py`
+  - `memory-curator.py`
+  - `capture-private-message.py`
+  - `cc-connect-lark-events-hook.py`
+  - `codex-feishu-group-sense.py`
+  - `codex-feishu-heartbeat-sense.py`
+  - `build-feishu-private-packet.py`
+  - `build-feishu-group-packet.py`
+  - `build-feishu-dream-packet.py`
+  - `build-feishu-recall-packet.py`
 
 ## 验证
 
@@ -239,6 +255,8 @@ tail -n 120 ./cc-connect-run.log
 - 如果启用 `--mini-ignore-bot-mentions` 且运行时支持该字段，deep bot 的 @ 根消息和同话题回复不会再进入 mini。
 - `/help`：返回静态使用指南。
 - `/dream`：执行工作区整理。
+- `/task preview 每周日晚上7点提醒大家整理周报`：预览自然语言任务解析。
+- `/task run ...`：只执行低风险结构化任务状态写入。
 - 飞书回复某条任务消息：继续对应会话。
 
 ## 常见问题

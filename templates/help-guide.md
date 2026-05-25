@@ -17,6 +17,9 @@ Codex Feishu group guide
 - /memfind <keyword>: search indexed memory and project records.
 - /memfind recent [n]: show recent memory records.
 - /tasks list: show workspace tasks.
+- /task list: show natural-language task-agent records.
+- /task preview <text>: parse a natural-language reminder, rota, delete, file, script, or deploy request without executing it.
+- /task run <text>: execute low-risk structured task state; missing fields are asked back, high-risk work stops for confirmation. Calendar creation is off unless the local operator enables it.
 
 Planned but not active until confirmation/audit paths exist:
 
@@ -27,4 +30,5 @@ Boundaries:
 
 - Group bots only use this generated workspace.
 - They must not read private calendars, email, contacts, private chats, or unrelated computer folders.
+- Event hooks and evidence packets redact raw IDs and secrets before they are used as model context.
 - /shell, /dir, /cron, /provider, /restart, /upgrade, and /commands are disabled for group projects.

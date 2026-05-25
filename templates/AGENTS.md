@@ -29,3 +29,7 @@ If handling a normal non-@ group task, rely on the platform `OnIt` / workingonit
 `/dream` is a fixed workspace-maintenance command. It runs `scripts/dream.ps1`, which launches `__DREAM_MODEL__` with `__DREAM_EFFORT__` reasoning from this directory. It may run commands, use network when needed for public project work, and update `KNOWLEDGE.md`, `memory/YYYY-MM-DD.md`, and `memory/dreams/`; it must not access private data or files outside this workspace.
 
 `/画图`, `/生图`, `/img`, `画图`, and `生图` are fixed platform image-generation commands when the runtime supports `image_command_enabled`. The Feishu platform calls `scripts/generate-image.js`, uploads the generated image, saves it under `local_files/generated/images/`, and records metadata in `memory/image-events-YYYY-MM-DD.jsonl`; do not expose API keys.
+
+`/task preview ...` and `/task run ...` are deterministic natural-language task helpers. Preview only parses and validates; run may write low-risk local state such as `memory/reminders.json` or `memory/rotas.json`. Feishu calendar creation is off by default and requires explicit local configuration. File edits, script generation, deploy, restart, and destructive actions must stop for confirmation or move to deep work.
+
+The event-capture hook stores compact, redacted group message events under `memory/lark-events/` for later `/dream`, `/memfind`, and evidence-packet workflows. Do not paste raw event JSON into normal replies.

@@ -82,8 +82,8 @@ function Ensure-TextFile($path, $content) {
 function Ensure-MemoryFiles($workspace) {
     Ensure-TextFile -path (Join-Path $workspace "memory\family\tasks.md") -content "# 家庭待办`n`n| Status | Item | Owner | Source | Created |`n| --- | --- | --- | --- | --- |`n"
     Ensure-TextFile -path (Join-Path $workspace "memory\family\shopping.md") -content "# 购物清单`n`n| Status | Item | Source | Created |`n| --- | --- | --- | --- |`n"
-    Ensure-TextFile -path (Join-Path $workspace "memory\family\decisions.md") -content "# 家庭决策`n`n记录家庭群中已经形成的决定。`n`n| Date | Decision | Source |`n| --- | --- | --- |`n"
-    Ensure-TextFile -path (Join-Path $workspace "memory\family\facts.md") -content "# 家庭事实`n`n记录家庭层面的长期事实。只写明确、可追溯、适合在家庭群内使用的信息。`n"
+    Ensure-TextFile -path (Join-Path $workspace "memory\family\decisions.md") -content "# 家庭决策`n`n记录长期协作群中已经形成的决定。`n`n| Date | Decision | Source |`n| --- | --- | --- |`n"
+    Ensure-TextFile -path (Join-Path $workspace "memory\family\facts.md") -content "# 家庭事实`n`n记录家庭层面的长期事实。只写明确、可追溯、适合在当前群内使用的信息。`n"
     Ensure-TextFile -path (Join-Path $workspace "memory\family\preferences.md") -content "# 家庭偏好`n`n记录家庭共同偏好，例如饮食、采购、出行、沟通方式。`n"
     Ensure-TextFile -path (Join-Path $workspace "memory\family\files.md") -content "# 文件索引摘要`n`n重要文件的语义摘要放这里；具体路径仍以 ``local_files/INDEX.md`` 为准。`n"
 }

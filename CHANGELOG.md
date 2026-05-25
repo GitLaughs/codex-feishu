@@ -7,6 +7,21 @@ versioning once public releases begin.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-25
+
+### Added
+
+- Added the natural-language task agent and `/task preview`, `/task run`, and `/task list` commands.
+- Added redacted Feishu event capture, private/group/dream/recall evidence packet builders, memory curator, group sense, and heartbeat sense scripts.
+- Windows and Linux installers now copy the full task, memory, evidence, and event-hook script set into generated workspaces.
+- Installers now register a redacted event-capture hook by default, with `-DisableEventCapture` and `--disable-event-capture` escape hatches.
+- Added focused tests for task-agent parsing/execution, private message capture, event hook capture, and evidence packets.
+
+### Changed
+
+- Public docs and examples now describe all core task and memory workflows using generic project/workspace names only.
+- Sanitized public examples to avoid local group names, provider names, private paths, and unrelated local project references.
+
 ## [0.8.1] - 2026-05-25
 
 ### Added

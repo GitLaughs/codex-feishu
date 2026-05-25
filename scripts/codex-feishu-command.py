@@ -11,7 +11,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -31,6 +33,35 @@ def index_script(root: Path) -> Path:
     if local.exists():
         return local
     return Path(__file__).resolve().with_name("codex-feishu-index.py")
+
+
+SECRET_PATTERNS = [
+    re.compile(r"(?i)(api[_-]?key|app[_-]?secret|access[_-]?token|refresh[_-]?token|authorization|password|passwd|pwd)\s*[:=]\s*[\"']?[^\"'\s]+"),
+    re.compile(r"(?i)Bearer\s+[A-Za-z0-9_.-]+"),
+    re.compile(r"(?i)sk-[A-Za-z0-9_-]{10,}"),
+]
+
+
+def redact_text(text: str) -> str:
+    value = str(text)
+    for pattern in SECRET_PATTERNS:
+        value = pattern.sub("[REDACTED]", value)
+    return value
+
+
+def clean_display_text(text: str, limit: int = 180) -> str:
+    value = redact_text(text)
+    value = re.sub(r"<!--.*?-->", "", value)
+    value = re.sub(r"^\ufeff", "", value)
+    value = re.sub(r"^\s*-\s*\[[^\]]+\]\s*(\[[^\]]+\]\s*){0,3}", "", value)
+    value = " ".join(value.split()).strip()
+    if len(value) > limit:
+        value = value[: max(0, limit - 3)] + "..."
+    return value
+
+
+def clean_error_text(text: str) -> str:
+    return clean_display_text(text, 300)
 
 
 def text_fingerprint(text: str) -> dict:
@@ -206,6 +237,23 @@ def selected_workspaces(root: Path, workspace: str | None) -> list[str]:
     if workspace:
         return [workspace]
     return default_workspaces(root)
+
+
+def validate_workspace(root: Path, workspace: str | None) -> str | None:
+    if workspace is None:
+        return None
+    value = str(workspace).strip()
+    if not value:
+        return None
+    if value == ".":
+        return value
+    if Path(value).is_absolute() or "/" in value or "\\" in value or ".." in value:
+        raise ValueError("workspace must be a manifest workspace name, not a path")
+    if value == manifest_workspace(root):
+        return value
+    if not (root / value / "workspace_manifest.json").exists():
+        raise ValueError(f"unknown workspace: {value}")
+    return value
 
 
 def selected_memory_scopes(root: Path, workspace: str | None) -> list[str]:
@@ -452,7 +500,91 @@ def workspace_info(root: Path, workspace: str | None) -> tuple[int, str, int]:
     return 0, "\n".join(lines)[:1800], count
 
 
+def task_agent_script(root: Path) -> Path:
+    local = root / "scripts" / "task-agent.py"
+    if local.exists():
+        return local
+    return Path(__file__).resolve().with_name("task-agent.py")
+
+
+def run_task_agent(root: Path, workspace: str | None, args: list[str]) -> subprocess.CompletedProcess:
+    argv = [sys.executable, str(task_agent_script(root)), "--root", str(root)]
+    if workspace:
+        argv.extend(["--workspace", workspace])
+    argv.extend(args)
+    return subprocess.run(
+        argv,
+        text=True,
+        encoding="utf-8",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+
+def task_agent_list(root: Path, workspace: str | None) -> tuple[int, str, int]:
+    proc = run_task_agent(root, workspace, ["--text", "list"])
+    if proc.returncode != 0:
+        return proc.returncode, f"任务代理查询失败：{clean_error_text(proc.stderr.strip() or proc.stdout.strip())}", 0
+    count = sum(1 for line in proc.stdout.splitlines() if line.startswith("- "))
+    return 0, proc.stdout.strip()[:1800], count
+
+
+def task_agent_handle(root: Path, workspace: str | None, body: str, *, dry_run: bool) -> tuple[int, str, int]:
+    if not body.strip():
+        return 2, "用法：/task preview 自然语言任务 或 /task run 自然语言任务", 0
+    task_args = ["--message", body]
+    if dry_run:
+        task_args.append("parse")
+    else:
+        if os.environ.get("CODEX_FEISHU_TASK_AGENT_CREATE_CALENDAR", "0") in {"1", "true", "TRUE", "yes", "YES"}:
+            task_args.append("--create-calendar")
+        task_args.append("handle")
+    proc = run_task_agent(root, workspace, task_args)
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return proc.returncode or 1, f"任务代理输出不可解析：{clean_error_text(proc.stderr.strip() or proc.stdout.strip())}", 0
+    if not data.get("ok"):
+        question = data.get("question")
+        route = data.get("route") or {}
+        result = data.get("result") or {}
+        preview = result.get("preview")
+        if question:
+            return 1, f"任务代理：{question}", 0
+        if preview:
+            return 1, f"任务代理需要确认：{clean_display_text(preview, 500)}", 0
+        if result.get("stage") == "calendar" or result.get("calendar"):
+            calendar = result.get("calendar") or {}
+            detail = calendar.get("result") or {}
+            error_text = detail.get("stderr") or detail.get("stdout") or result.get("error") or data.get("error") or "未知错误"
+            return 1, f"任务代理已写入本地任务，但飞书日程创建失败：{clean_error_text(str(error_text))[:700]}", 0
+        task_type = route.get("task_type") or (data.get("spec") or {}).get("task_type") or "unknown"
+        return 1, f"任务代理暂未执行：{task_type}，阶段 {data.get('stage') or result.get('stage') or 'unknown'}。", 0
+    if dry_run:
+        spec = data.get("spec") or {}
+        validation = data.get("validation") or {}
+        question = validation.get("question")
+        if question:
+            return 1, f"任务代理：{question}", 0
+        return 0, f"任务代理预览：{spec.get('task_type')}\n{json.dumps(spec, ensure_ascii=False, indent=2)[:1500]}", 1
+    spec = data.get("spec") or {}
+    result = data.get("result") or {}
+    task_type = spec.get("task_type")
+    detail = result.get("preview") or result.get("path") or result.get("id") or "已完成"
+    calendar = result.get("calendar") or {}
+    if calendar.get("ok"):
+        event = (calendar.get("result") or {}).get("data", {}).get("event", {})
+        event_id = event.get("event_id") or (calendar.get("result") or {}).get("event_id")
+        detail = f"{detail}\n飞书日程已创建" + (f"：{event_id}" if event_id else "")
+    return 0, f"任务代理已执行：{task_type}\n{detail}", 1
+
+
 def normalize_command(words: list[str]) -> tuple[str, str]:
+    forbidden = {"--root", "--workspace"}
+    for word in words:
+        if word in forbidden or word.startswith("--root=") or word.startswith("--workspace="):
+            return "forbidden-option", word
     if not words:
         return "help", ""
     head = words[0].lower()
@@ -490,6 +622,15 @@ def normalize_command(words: list[str]) -> tuple[str, str]:
         if not parts or parts[0].lower() in {"list", "open", "ls", "列表", "查看"}:
             return "tasks-list", parts[1] if len(parts) > 1 else ""
         return "tasks-list", rest
+    if head in {"/task", "task", "任务代理"}:
+        parts = rest.split(maxsplit=1)
+        if not parts or parts[0].lower() in {"list", "ls", "列表", "查看"}:
+            return "task-agent-list", parts[1] if len(parts) > 1 else ""
+        if parts[0].lower() in {"preview", "parse", "预览", "解析"}:
+            return "task-agent-preview", parts[1] if len(parts) > 1 else ""
+        if parts[0].lower() in {"run", "create", "执行", "创建"}:
+            return "task-agent-run", parts[1] if len(parts) > 1 else ""
+        return "task-agent-preview", rest
     if head in {"/workspace-info", "workspace-info", "/workspace", "workspace", "工作区"}:
         return "workspace-info", rest
     if head in {"/help", "help", "帮助"}:
@@ -510,8 +651,11 @@ def help_text() -> str:
             "/memfind 关键词：查记忆和项目记录",
             "/memfind recent：查看最近记忆条目",
             "/tasks list：查看当前工作区任务",
+            "/task list：查看自然语言任务记录",
+            "/task preview 自然语言任务：预览任务代理解析，不执行",
+            "/task run 自然语言任务：执行低风险结构化任务；缺字段会先追问",
             "/workspace-info：查看当前工作区绑定与命令面",
-            "这些命令走 SQLite/FTS5，不进入模型思考。",
+            "查找类命令走 SQLite/FTS5；任务代理只执行低风险结构化写入，高风险文件/脚本/部署任务会停在确认。",
         ]
     )
 
@@ -527,7 +671,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     root = Path(args.root).resolve()
-    effective_workspace = args.workspace or infer_workspace(root)
+    effective_workspace = validate_workspace(root, args.workspace or infer_workspace(root))
     started = time.time()
     cmd, body = normalize_command(args.words)
     code = 0
@@ -553,8 +697,16 @@ def main(argv: list[str]) -> int:
             code, text, result_count = search(root, effective_workspace, body, "知识库检索：", ["knowledge"])
         elif cmd == "tasks-list":
             code, text, result_count = list_tasks(root, effective_workspace, body)
+        elif cmd == "task-agent-list":
+            code, text, result_count = task_agent_list(root, effective_workspace)
+        elif cmd == "task-agent-preview":
+            code, text, result_count = task_agent_handle(root, effective_workspace, body, dry_run=True)
+        elif cmd == "task-agent-run":
+            code, text, result_count = task_agent_handle(root, effective_workspace, body, dry_run=False)
         elif cmd == "workspace-info":
             code, text, result_count = workspace_info(root, effective_workspace)
+        elif cmd == "forbidden-option":
+            code, text = 2, "命令参数里不能覆盖 --root 或 --workspace；请在当前工作区直接使用命令。"
         else:
             code, text = 2, help_text()
         print(text)

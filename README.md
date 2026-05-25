@@ -43,7 +43,7 @@ This project uses two Feishu apps to separate those jobs:
 flowchart LR
     A[Feishu group] --> B[Mini app: all messages]
     A --> C[Deep app: @ mentions]
-    B --> D[jichuang-style mini project]
+    B --> D[mini project]
     C --> E[deep project]
     D --> F[Codex mini model]
     E --> G[Codex deep model]
@@ -68,6 +68,8 @@ flowchart LR
 - Platform-layer image generation commands: `/画图`, `/生图`, `/img`, `画图`, and `生图`.
 - Optional family memory capture hook for workspace-local household memory, tasks, and shopping lists.
 - Static `/help` command and `/dream` workspace maintenance command.
+- Natural-language task agent commands: `/task preview`, `/task run`, and `/task list`.
+- Redacted event capture and compact evidence packets for memory curation, group sensing, recall, and `/dream`.
 - Group project command hardening: `/shell`, `/dir`, `/cron`, `/provider`, `/restart`, `/upgrade`, and `/commands` are disabled.
 - Stream preview tuned for visible progress during long replies.
 - Workspace bootstrap with `AGENTS.md`, `INSTRUCTIONS.md`, `KNOWLEDGE.md`, `memory`, and `local_files`.
@@ -130,7 +132,7 @@ See [docs/feishu-console.md](docs/feishu-console.md) for the console checklist.
 Clone or copy this repository, then run on Windows:
 
 ```powershell
-cd E:\codex-feishu
+cd codex-feishu
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
@@ -178,7 +180,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -DreamModel "gpt-5.5" `
   -DreamEffort "xhigh" `
   -CodexMode "yolo" `
-  -WorkspacePath "E:\FeishuCodexWorkspace" `
+  -WorkspacePath "C:\codex-feishu-workspace" `
   -MiniAppId "cli_xxx" `
   -MiniAppSecret "..." `
   -DeepAppId "cli_yyy" `
@@ -274,6 +276,7 @@ Static commands:
 - `/help`: returns `local_files/docs/help-guide.md` without model reasoning.
 - `/dream`: runs a bounded workspace maintenance pass and writes detailed notes under `memory`.
 - `/files`, `/memfind`, `/knowledge`, `/tasks`, `/workspace-info`, `/status-index`, and `/health-codex-feishu`: run deterministic local scripts without model reasoning.
+- `/task preview`, `/task run`, and `/task list`: parse natural-language reminders, rotas, calendar deletes, file/script/deploy requests, and only execute low-risk structured local state. Calendar creation requires `CODEX_FEISHU_TASK_AGENT_CREATE_CALENDAR=1` plus a configured `lark-cli` identity.
 - `/画图`, `/生图`, `/img`, `画图`, `生图`: when the runtime supports `image_command_enabled`, the Feishu platform calls `scripts/generate-image.js`, uploads the generated image, and records metadata under `memory/image-events-YYYY-MM-DD.jsonl`.
 
 Image generation needs an OpenAI-compatible image API key in the service environment, for example:
@@ -298,6 +301,7 @@ Read-only workspace commands:
 - `/knowledge summary` and `/knowledge search <keyword>`
 - `/memfind <keyword>` and `/memfind recent [n]`
 - `/tasks list`
+- `/task preview <text>`, `/task run <text>`, and `/task list`
 - `/workspace-info`
 - `/status-index`
 - `/health-codex-feishu`
@@ -305,10 +309,12 @@ Read-only workspace commands:
 Refresh the local SQLite/FTS index on demand:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\codex-feishu-reindex.ps1 -Root E:\FeishuCodexWorkspace -Force
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\codex-feishu-reindex.ps1 -Root C:\codex-feishu-workspace -Force
 ```
 
-Memory write commands remain in `planned_commands` until confirmation, audit, and soft-delete paths are implemented. See [Memory and file management roadmap](docs/memory-file-optimization-plan.md).
+The installer also enables a redacted event-capture hook by default. It writes compact group event evidence under `memory/lark-events/` for `/dream`, `/memfind`, group sensing, recall, and evidence packets. Disable it with `-DisableEventCapture` on Windows or `--disable-event-capture` on Linux.
+
+General memory write/delete commands remain in `planned_commands` until confirmation, audit, and soft-delete paths are implemented. See [Memory and file management roadmap](docs/memory-file-optimization-plan.md).
 
 Parallel tasks:
 

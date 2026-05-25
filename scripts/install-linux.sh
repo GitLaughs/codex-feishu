@@ -25,6 +25,7 @@ deep_app_id=""
 deep_app_secret=""
 no_systemd=0
 enable_family_memory=0
+disable_event_capture=0
 enable_codex_balance_rotate=0
 codex_rotate_service_name="codex-feishu-codex-balance-rotate"
 codex_rotate_db_path="${HOME}/.cc-switch/cc-switch.db"
@@ -65,6 +66,7 @@ while [[ $# -gt 0 ]]; do
     --deep-app-id) deep_app_id="$2"; shift 2 ;;
     --deep-app-secret) deep_app_secret="$2"; shift 2 ;;
     --no-systemd) no_systemd=1; shift ;;
+    --disable-event-capture) disable_event_capture=1; shift ;;
     --enable-family-memory) enable_family_memory=1; shift ;;
     --enable-codex-balance-rotate) enable_codex_balance_rotate=1; shift ;;
     --codex-rotate-service-name) codex_rotate_service_name="$2"; shift 2 ;;
@@ -219,7 +221,7 @@ echo "Deep Feishu app credentials"
 
 mkdir -p "$(dirname "$config_path")"
 mkdir -p "$workspace_path/scripts"
-for folder in daily facts inbox people projects reviews search tasks dreams lark-events; do
+for folder in daily facts inbox people projects reviews search tasks dreams lark-events evidence; do
   mkdir -p "$workspace_path/memory/$folder"
 done
 for file_name in open.md done.md; do
@@ -248,9 +250,13 @@ if [[ ! -f "$knowledge_path" ]]; then
   printf '# Knowledge\n' >"$knowledge_path"
 fi
 
-for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh lark-event-listener.sh help.sh dream.sh generate-image.js codex-feishu-index.py codex-feishu-command.py codex-feishu-health-command.py codex-feishu-file-health.py codex-feishu-memory-health.py codex-feishu-manifest-health.py codex-feishu-help-health.py codex-feishu-redact-runs.py codex-feishu-reindex.sh test-codex-feishu-command-isolation.py; do
+for script_name in import-local-file.sh lark-download-resource.sh lark-health.sh lark-event-listener.sh help.sh dream.sh generate-image.js codex-feishu-index.py codex-feishu-command.py codex-feishu-health-command.py codex-feishu-file-health.py codex-feishu-memory-health.py codex-feishu-manifest-health.py codex-feishu-help-health.py codex-feishu-redact-runs.py codex-feishu-reindex.sh memory-recall.ps1 task-agent.py create-feishu-reminder.py delete-feishu-reminder.py memory-curator.py capture-private-message.py cc-connect-lark-events-hook.py codex-feishu-group-sense.py codex-feishu-heartbeat-sense.py build-feishu-private-packet.py build-feishu-group-packet.py build-feishu-dream-packet.py build-feishu-recall-packet.py test-codex-feishu-command-isolation.py; do
   cp "$install_root/scripts/$script_name" "$workspace_path/scripts/$script_name"
   chmod +x "$workspace_path/scripts/$script_name" 2>/dev/null || true
+done
+mkdir -p "$workspace_path/scripts/lib"
+for script_name in evidence_packet.py task_intent_router.py; do
+  cp "$install_root/scripts/lib/$script_name" "$workspace_path/scripts/lib/$script_name"
 done
 if [[ "$enable_family_memory" -eq 1 ]]; then
   for script_name in family-memory-capture.py family-memory-capture.ps1 cc-connect-memory-hook.sh test-family-memory.ps1 test-family-memory-hook.ps1; do
@@ -300,6 +306,19 @@ if [[ -n "$admin_open_id" && "$admin_open_id" != "*" ]]; then
 fi
 mini_ignore_bot_mentions_line="$(toml_array_line "ignore_bot_mentions" "$mini_ignore_bot_mentions")"
 deep_instant_ack_line="$(toml_string_line "instant_ack_text" "$deep_instant_ack_text")"
+event_hook_block=""
+if [[ "$disable_event_capture" -ne 1 ]]; then
+  event_workspace_map="{\"${mini_project}\":\".\",\"${deep_project}\":\".\"}"
+  event_hook_block="$(cat <<EOF
+[[hooks]]
+event = "message.received"
+type = "command"
+command = "CODEX_FEISHU_ROOT=\"$(toml_escape "$workspace_path")\" CODEX_FEISHU_LARK_EVENT_WORKSPACE_MAP='$(toml_escape "$event_workspace_map")' python3 \"$(toml_escape "$workspace_path")/scripts/cc-connect-lark-events-hook.py\""
+async = true
+timeout = 8
+EOF
+)"
+fi
 family_memory_hook_block=""
 if [[ "$enable_family_memory" -eq 1 ]]; then
   family_memory_projects="$(toml_escape "${mini_project},${deep_project}")"
@@ -328,6 +347,7 @@ config="$(replace_token "$config" "__DEEP_EFFORT__" "$(toml_escape "$deep_effort
 config="$(replace_token "$config" "__GROUP_ADMIN_LINE__" "$group_admin_line")"
 config="$(replace_token "$config" "__MINI_IGNORE_BOT_MENTIONS_LINE__" "$mini_ignore_bot_mentions_line")"
 config="$(replace_token "$config" "__DEEP_INSTANT_ACK_LINE__" "$deep_instant_ack_line")"
+config="$(replace_token "$config" "__EVENT_HOOK_BLOCK__" "$event_hook_block")"
 config="$(replace_token "$config" "__FAMILY_MEMORY_HOOK_BLOCK__" "$family_memory_hook_block")"
 config="$(replace_token "$config" "__MINI_APP_ID__" "$(toml_escape "$mini_app_id")")"
 config="$(replace_token "$config" "__MINI_APP_SECRET__" "$(toml_escape "$mini_app_secret")")"

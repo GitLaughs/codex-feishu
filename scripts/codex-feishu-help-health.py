@@ -25,6 +25,9 @@ REQUIRED_SNIPPETS = [
     "/memfind",
     "/memfind recent",
     "/tasks list",
+    "/task list",
+    "/task preview",
+    "/task run",
 ]
 
 

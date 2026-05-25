@@ -26,7 +26,7 @@ patterns=(
   "1QOdx"
   "ou_[a-z0-9]{10,}"
   "oc_c175"
-  "OPENCLAW"
+  "OPEN""CLAW"
   "mini_secret_test"
   "deep_secret_test"
 )
@@ -80,7 +80,7 @@ bash "$root/scripts/install-linux.sh" \
 [[ -f "$tmp/config.toml" ]] || add_failure "Linux install did not generate config."
 grep -q 'name = "help"' "$tmp/config.toml" || add_failure "Linux install did not generate /help command."
 grep -q 'name = "dream"' "$tmp/config.toml" || add_failure "Linux install did not generate /dream command."
-for command_name in files memfind knowledge tasks workspace-info status-index health-codex-feishu; do
+for command_name in files memfind knowledge tasks task workspace-info status-index health-codex-feishu; do
   grep -q "name = \"${command_name}\"" "$tmp/config.toml" || add_failure "Linux install did not generate /${command_name} command."
 done
 grep -q 'disabled_commands = \["dir", "shell", "restart", "upgrade", "cron", "commands", "provider"\]' "$tmp/config.toml" || add_failure "Linux install did not disable privileged group commands."
@@ -95,6 +95,7 @@ grep -q 'reaction_emoji = "OnIt"' "$tmp/config.toml" || add_failure "Linux insta
 grep -q 'image_command_enabled = true' "$tmp/config.toml" || add_failure "Linux install did not enable platform image commands."
 grep -q 'generate-image.js' "$tmp/config.toml" || add_failure "Linux install did not configure the image generation helper."
 grep -q 'cc-connect-memory-hook.sh' "$tmp/config.toml" || add_failure "Linux install did not generate optional family memory hook."
+grep -q 'cc-connect-lark-events-hook.py' "$tmp/config.toml" || add_failure "Linux install did not generate lark event capture hook."
 [[ -f "$tmp/workspace/AGENTS.md" ]] || add_failure "Linux install did not generate AGENTS.md."
 [[ -f "$tmp/workspace/INSTRUCTIONS.md" ]] || add_failure "Linux install did not generate INSTRUCTIONS.md."
 [[ -f "$tmp/workspace/workspace_manifest.json" ]] || add_failure "Linux install did not generate workspace manifest."
@@ -104,8 +105,11 @@ grep -q 'cc-connect-memory-hook.sh' "$tmp/config.toml" || add_failure "Linux ins
 [[ -f "$tmp/workspace/scripts/generate-image.js" ]] || add_failure "Linux install did not copy generate-image.js."
 [[ -f "$tmp/workspace/scripts/family-memory-capture.py" ]] || add_failure "Linux install did not copy family-memory-capture.py."
 [[ -f "$tmp/workspace/scripts/cc-connect-memory-hook.sh" ]] || add_failure "Linux install did not copy cc-connect-memory-hook.sh."
-for script_name in codex-feishu-index.py codex-feishu-command.py codex-feishu-health-command.py codex-feishu-file-health.py codex-feishu-memory-health.py codex-feishu-manifest-health.py codex-feishu-help-health.py codex-feishu-redact-runs.py codex-feishu-reindex.sh test-codex-feishu-command-isolation.py; do
+for script_name in codex-feishu-index.py codex-feishu-command.py codex-feishu-health-command.py codex-feishu-file-health.py codex-feishu-memory-health.py codex-feishu-manifest-health.py codex-feishu-help-health.py codex-feishu-redact-runs.py codex-feishu-reindex.sh memory-recall.ps1 task-agent.py create-feishu-reminder.py delete-feishu-reminder.py memory-curator.py capture-private-message.py cc-connect-lark-events-hook.py codex-feishu-group-sense.py codex-feishu-heartbeat-sense.py build-feishu-private-packet.py build-feishu-group-packet.py build-feishu-dream-packet.py build-feishu-recall-packet.py test-codex-feishu-command-isolation.py; do
   [[ -f "$tmp/workspace/scripts/$script_name" ]] || add_failure "Linux install did not copy deterministic command script $script_name."
+done
+for script_name in evidence_packet.py task_intent_router.py; do
+  [[ -f "$tmp/workspace/scripts/lib/$script_name" ]] || add_failure "Linux install did not copy scripts/lib/$script_name."
 done
 [[ -d "$tmp/workspace/memory/family" ]] || add_failure "Linux install did not create family memory folder."
 
@@ -113,6 +117,7 @@ if [[ -n "$python_bin" ]]; then
   "$python_bin" "$tmp/workspace/scripts/codex-feishu-index.py" --root "$tmp/workspace" reindex >/dev/null || add_failure "Linux deterministic reindex failed."
   "$python_bin" "$tmp/workspace/scripts/test-codex-feishu-command-isolation.py" --root "$tmp/workspace" >/dev/null || add_failure "Linux command isolation failed."
   "$python_bin" "$tmp/workspace/scripts/codex-feishu-health-command.py" --root "$tmp/workspace" | grep -q 'codex-feishu 健康：OK' || add_failure "Linux codex-feishu health command failed."
+  "$python_bin" "$tmp/workspace/scripts/codex-feishu-command.py" --root "$tmp/workspace" /task preview "每天晚上9点提醒我检查服务状态" | grep -q '任务代理预览' || add_failure "Linux /task preview failed."
 fi
 
 rm -rf "$tmp"

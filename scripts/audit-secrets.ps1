@@ -17,7 +17,6 @@ $patterns = @(
 $allowedFiles = @(
     "docs\product-iteration-plan.md",
     "docs\cloud-deploy-and-update.md",
-    "docs\feishu-jichuang-mini-fix.md",
     "scripts\audit-secrets.ps1"
 )
 

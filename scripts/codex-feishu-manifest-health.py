@@ -29,6 +29,10 @@ REQUIRED_COMMANDS = [
     "/memfind recent",
     "/tasks",
     "/tasks list",
+    "/task",
+    "/task list",
+    "/task preview",
+    "/task run",
     "/workspace-info",
 ]
 PLANNED_ONLY_PREFIXES = ["/remember", "/forget", "/memory review", "/files describe", "/files ingest", "/files link", "/files archive"]

@@ -71,11 +71,11 @@ def ensure_memory_files(workspace):
     )
     ensure_file(
         family / "decisions.md",
-        "# 家庭决策\n\n记录家庭群中已经形成的决定。\n\n| Date | Decision | Source |\n| --- | --- | --- |\n",
+        "# 家庭决策\n\n记录长期协作群中已经形成的决定。\n\n| Date | Decision | Source |\n| --- | --- | --- |\n",
     )
     ensure_file(
         family / "facts.md",
-        "# 家庭事实\n\n记录家庭层面的长期事实。只写明确、可追溯、适合在家庭群内使用的信息。\n",
+        "# 家庭事实\n\n记录家庭层面的长期事实。只写明确、可追溯、适合在当前群内使用的信息。\n",
     )
     ensure_file(
         family / "preferences.md",

@@ -10,6 +10,8 @@
 - deep bot：只处理 @，用 `gpt-5.5` 处理复杂任务。
 - `/help`：直接返回静态群聊使用指南，不进入模型推理。
 - `/dream`：用 deep 模型整理本地工作区、知识库和文件索引。
+- `/task preview/run/list`：解析自然语言提醒、轮值、日程删除、文件/脚本/部署请求；只自动执行低风险结构化状态写入。
+- 事件捕获和 evidence packet：把群消息脱敏后写入本地 `memory/lark-events/`，供记忆整理、召回和 `/dream` 使用。
 - 可选家庭记忆：把明确的“记住 / 待办 / 购物 / 查记忆”消息写入本地工作区。
 
 普通群消息、文件和项目上下文不会丢；真正复杂的任务可以直接 @ deep bot。
@@ -111,7 +113,7 @@ https://open.feishu.cn/app/<app_id>
 | `MiniAppSecret` | mini app secret | 不要提交到 Git |
 | `DeepAppId` | deep app 的 app id | `cli_yyy` |
 | `DeepAppSecret` | deep app secret | 不要提交到 Git |
-| `WorkspacePath` | 本地群聊工作区 | `E:\FeishuCodexWorkspace` |
+| `WorkspacePath` | 本地群聊工作区 | `C:\codex-feishu-workspace` |
 
 如果暂时不知道群 `chat_id`，可以先参考 `cc-connect` 或飞书 API 获取方式；本仓库不会内置你的真实群 ID。
 
@@ -141,7 +143,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -DreamModel "gpt-5.5" `
   -DreamEffort "xhigh" `
   -CodexMode "yolo" `
-  -WorkspacePath "E:\FeishuCodexWorkspace" `
+  -WorkspacePath "C:\codex-feishu-workspace" `
   -MiniAppId "cli_xxx" `
   -MiniAppSecret "填你的 mini secret" `
   -DeepAppId "cli_yyy" `
@@ -156,7 +158,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 - 创建群聊工作区。
 - 生成 `AGENTS.md`、`INSTRUCTIONS.md`、`KNOWLEDGE.md`、`memory` 和 `local_files` 目录。
 - 生成 `/help` 指南和 `/dream` 维护提示词。
-- 复制文件归档、飞书资源下载、事件监听、健康检查和画图脚本。
+- 复制文件归档、飞书资源下载、事件监听、健康检查、画图、自然语言任务代理、记忆整理、事件捕获和 evidence packet 脚本。
+- 默认注册脱敏事件捕获 hook；如需关闭，安装时加 `-DisableEventCapture`。
 - 如果启用 `-EnableFamilyMemory`，复制家庭记忆脚本并创建 `memory/messages`、`memory/people`、`memory/family`、`memory/summaries`。
 - 注册 Windows 计划任务启动 `cc-connect`。
 - 注册 watchdog，定期检查并拉起 `cc-connect`。
@@ -233,12 +236,15 @@ Get-ScheduledTask -TaskName codex-feishu-cc-connect,codex-feishu-watchdog
 ```text
 /help
 /dream
+/task preview 每周日晚上7点提醒大家整理周报
+/task list
 ```
 
 预期：
 
 - `/help` 返回 `local_files/docs/help-guide.md` 的内容。
 - `/dream` 在工作区内整理 `KNOWLEDGE.md`、`memory/YYYY-MM-DD.md` 和 `memory/dreams/`。
+- `/task preview` 输出结构化解析，不直接执行；`/task run` 只执行低风险任务状态写入。自动创建飞书日程默认关闭，需要配置 `lark-cli` 后显式设置 `CODEX_FEISHU_TASK_AGENT_CREATE_CALENDAR=1`。
 - `/画图`、`/生图`、`/img`、`画图`、`生图` 在支持 `image_command_enabled` 的运行时中直接生成图片。需要在运行服务的环境里配置 `FEISHU_IMAGE_API_KEY`，可选配置 `FEISHU_IMAGE_BASE_URL`、`FEISHU_IMAGE_API_MODE`、`FEISHU_IMAGE_IMAGES_MODEL`。
 
 ## 10. 常见问题

@@ -22,6 +22,7 @@
     [string]$MiniAppSecret = "",
     [string]$DeepAppId = "",
     [string]$DeepAppSecret = "",
+    [switch]$DisableEventCapture,
     [switch]$EnableFamilyMemory,
     [switch]$NoScheduledTasks
 )
@@ -159,7 +160,7 @@ $configDir = Split-Path -Parent $ConfigPath
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 New-Item -ItemType Directory -Force -Path $WorkspacePath | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "scripts") | Out-Null
-foreach ($folder in "daily","facts","inbox","people","projects","reviews","search","tasks","dreams","lark-events") {
+foreach ($folder in "daily","facts","inbox","people","projects","reviews","search","tasks","dreams","lark-events","evidence") {
     New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "memory\$folder") | Out-Null
 }
 foreach ($fileName in "open.md","done.md") {
@@ -190,12 +191,29 @@ if (!(Test-Path -LiteralPath $knowledgePath)) {
 }
 
 $workspaceFwd = Convert-ToForwardSlash $WorkspacePath
+$workspaceName = Split-Path -Leaf $WorkspacePath
 $groupAdminLine = ""
 if (![string]::IsNullOrWhiteSpace($adminOpenId) -and $adminOpenId -ne "*") {
     $groupAdminLine = "admin_from = `"$adminOpenId`""
 }
 $miniIgnoreBotMentionsLine = Convert-ToTomlArrayLine -Key "ignore_bot_mentions" -Csv $miniIgnoreBotMentions
 $deepInstantAckLine = Convert-ToTomlStringLine -Key "instant_ack_text" -Value $deepInstantAckText
+$eventHookBlock = ""
+if (!$DisableEventCapture) {
+    $workspaceMap = @{
+        $miniProject = "."
+        $deepProject = "."
+    } | ConvertTo-Json -Compress
+    $hookCommand = Convert-ToTomlLiteral "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command `"`$env:CODEX_FEISHU_ROOT='$WorkspacePath'; `$env:CODEX_FEISHU_LARK_EVENT_WORKSPACE_MAP='$workspaceMap'; python '$workspaceFwd/scripts/cc-connect-lark-events-hook.py'`""
+    $eventHookBlock = @"
+[[hooks]]
+event = "message.received"
+type = "command"
+command = "$hookCommand"
+async = true
+timeout = 8
+"@
+}
 $familyMemoryHookBlock = ""
 if ($EnableFamilyMemory) {
     $projects = "$miniProject,$deepProject"
@@ -210,8 +228,12 @@ timeout = 8
 "@
 }
 
-foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js","codex-feishu-index.py","codex-feishu-command.py","codex-feishu-health-command.py","codex-feishu-file-health.py","codex-feishu-memory-health.py","codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-redact-runs.py","codex-feishu-reindex.ps1","test-codex-feishu-command-isolation.py") {
+foreach ($scriptName in "import-local-file.ps1","lark-download-resource.ps1","lark-health.ps1","lark-event-listener.ps1","help.ps1","dream.ps1","generate-image.js","codex-feishu-index.py","codex-feishu-command.py","codex-feishu-health-command.py","codex-feishu-file-health.py","codex-feishu-memory-health.py","codex-feishu-manifest-health.py","codex-feishu-help-health.py","codex-feishu-redact-runs.py","codex-feishu-reindex.ps1","memory-recall.ps1","task-agent.py","create-feishu-reminder.py","delete-feishu-reminder.py","memory-curator.py","capture-private-message.py","cc-connect-lark-events-hook.py","codex-feishu-group-sense.py","codex-feishu-heartbeat-sense.py","build-feishu-private-packet.py","build-feishu-group-packet.py","build-feishu-dream-packet.py","build-feishu-recall-packet.py","test-codex-feishu-command-isolation.py") {
     Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\$scriptName") -Force
+}
+New-Item -ItemType Directory -Force -Path (Join-Path $WorkspacePath "scripts\lib") | Out-Null
+foreach ($scriptName in "evidence_packet.py","task_intent_router.py") {
+    Copy-Item -LiteralPath (Join-Path $InstallRoot "scripts\lib\$scriptName") -Destination (Join-Path $WorkspacePath "scripts\lib\$scriptName") -Force
 }
 if ($EnableFamilyMemory) {
     foreach ($scriptName in "family-memory-capture.ps1","family-memory-capture.py","cc-connect-memory-hook.ps1","test-family-memory.ps1","test-family-memory-hook.ps1") {
@@ -248,7 +270,6 @@ Write-Utf8File -Path (Join-Path $WorkspacePath "scripts\dream_prompt.md") -Conte
 $helpGuideTemplate = Get-Content -LiteralPath (Join-Path $InstallRoot "templates\help-guide.md") -Raw
 Write-Utf8File -Path (Join-Path $WorkspacePath "local_files\docs\help-guide.md") -Content $helpGuideTemplate
 
-$workspaceName = Split-Path -Leaf $WorkspacePath
 $manifestTemplate = Get-Content -LiteralPath (Join-Path $InstallRoot "templates\workspace_manifest.json") -Raw
 $manifest = $manifestTemplate.
     Replace("__WORKSPACE_NAME__", $workspaceName).
@@ -286,6 +307,7 @@ $config = $template.
     Replace("__GROUP_ADMIN_LINE__", $groupAdminLine).
     Replace("__MINI_IGNORE_BOT_MENTIONS_LINE__", $miniIgnoreBotMentionsLine).
     Replace("__DEEP_INSTANT_ACK_LINE__", $deepInstantAckLine).
+    Replace("__EVENT_HOOK_BLOCK__", $eventHookBlock).
     Replace("__FAMILY_MEMORY_HOOK_BLOCK__", $familyMemoryHookBlock).
     Replace("__MINI_APP_ID__", $miniAppId).
     Replace("__MINI_APP_SECRET__", (Convert-ToTomlLiteral $miniAppSecret)).

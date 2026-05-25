@@ -46,6 +46,11 @@ description = "List workspace tasks"
 exec = "python \"__WORKSPACE_FWD__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /tasks {{args}}"
 
 [[commands]]
+name = "task"
+description = "Natural-language task parser and low-risk executor"
+exec = "python \"__WORKSPACE_FWD__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /task {{args}}"
+
+[[commands]]
 name = "workspace-info"
 description = "Show workspace manifest and command surface"
 exec = "python \"__WORKSPACE_FWD__/scripts/codex-feishu-command.py\" --root \"__WORKSPACE__\" /workspace-info"
@@ -59,6 +64,8 @@ exec = "python \"__WORKSPACE_FWD__/scripts/codex-feishu-command.py\" --root \"__
 name = "health-codex-feishu"
 description = "Show local codex-feishu workspace health"
 exec = "python \"__WORKSPACE_FWD__/scripts/codex-feishu-health-command.py\" --root \"__WORKSPACE__\""
+
+__EVENT_HOOK_BLOCK__
 
 __FAMILY_MEMORY_HOOK_BLOCK__
 

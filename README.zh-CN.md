@@ -42,6 +42,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - 支持流式预览，让长任务不再像“卡住了”。
 - `/help` 静态帮助和 `/dream` 工作区整理命令。
 - 确定性只读命令：`/files`、`/memfind`、`/knowledge`、`/tasks`、`/workspace-info`、`/status-index`、`/health-codex-feishu`。
+- 自然语言任务代理：`/task preview`、`/task run`、`/task list`，用于解析提醒、轮值、删除日程、文件/脚本/部署请求；只自动执行低风险结构化状态写入。
+- 记忆管理核心：事件捕获、私聊/群聊 evidence packet、`memory-curator.py`、`codex-feishu-group-sense.py`、`codex-feishu-heartbeat-sense.py`、召回包构建器。
 - Windows 后台静默启动，不弹出终端窗口。
 - Linux 支持 `install-linux.sh` 和 systemd user service。
 - 新手 Ubuntu bootstrap 脚本可自动准备 apt 依赖、swap、Node.js 22、Codex、cc-connect，并 clone/update 仓库。
@@ -79,6 +81,7 @@ flowchart LR
 - `/help` 直接返回静态指南，不进入模型推理。
 - `/dream` 使用 deep 模型整理本地工作区知识、索引和记忆。
 - `/files`、`/memfind`、`/knowledge`、`/tasks` 走 SQLite/FTS5 本地索引，不进入模型推理。
+- `/task preview/run/list` 走确定性任务代理；低风险提醒和轮值会写入本地状态，高风险文件、脚本、部署类请求会停在确认。
 
 ## 安装前准备
 
@@ -124,7 +127,7 @@ bash ./scripts/install-linux.sh
 Windows 交互式安装：
 
 ```powershell
-cd E:\codex-feishu
+cd codex-feishu
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
@@ -151,6 +154,7 @@ bash ./scripts/install-linux.sh
 - `~\.cc-connect\config.toml`
 - 本地群聊工作区
 - `AGENTS.md`、`INSTRUCTIONS.md`、`help-guide.md`、`dream_prompt.md`
+- 自然语言任务代理、事件捕获、记忆整理、证据包和召回脚本
 - Windows 计划任务和 watchdog
 
 ## 非交互安装
@@ -172,7 +176,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
   -DreamModel "gpt-5.5" `
   -DreamEffort "xhigh" `
   -CodexMode "yolo" `
-  -WorkspacePath "E:\FeishuCodexWorkspace" `
+  -WorkspacePath "C:\codex-feishu-workspace" `
   -MiniAppId "cli_xxx" `
   -MiniAppSecret "..." `
   -DeepAppId "cli_yyy" `
@@ -266,6 +270,9 @@ FEISHU_IMAGE_IMAGES_MODEL=gpt-image-1
 - `/knowledge search <关键词>`：只查 curated knowledge。
 - `/memfind <关键词>` 和 `/memfind recent [数量]`：查记忆和项目记录。
 - `/tasks list`：查看任务条目。
+- `/task preview <自然语言任务>`：解析提醒、轮值、日程删除、文件、脚本或部署请求，不执行。
+- `/task run <自然语言任务>`：只执行低风险结构化状态写入；缺字段会先追问，高风险任务会要求确认或转 deep。需要自动创建飞书日程时，在服务环境显式设置 `CODEX_FEISHU_TASK_AGENT_CREATE_CALENDAR=1` 并配置 `lark-cli`。
+- `/task list`：查看任务代理写入的记录。
 - `/workspace-info`：查看工作区 manifest 和命令面。
 - `/status-index`：查看 SQLite/FTS5 索引状态。
 - `/health-codex-feishu`：检查 manifest、help、文件索引、记忆和 runs 脱敏状态。
@@ -273,14 +280,16 @@ FEISHU_IMAGE_IMAGES_MODEL=gpt-image-1
 索引可按需刷新：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\codex-feishu-reindex.ps1 -Root E:\FeishuCodexWorkspace -Force
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\codex-feishu-reindex.ps1 -Root C:\codex-feishu-workspace -Force
 ```
 
-写记忆相关命令目前只进入 `planned_commands`，不会作为 active command 上线，直到确认、审计和软删除链路完成。路线图见 [docs/memory-file-optimization-plan.md](docs/memory-file-optimization-plan.md)。
+安装器默认启用事件捕获 hook，把群消息的脱敏摘要写入 `memory/lark-events/`，供 `/dream`、`/memfind`、`codex-feishu-group-sense.py` 和 evidence packet 使用。需要关闭时，Windows 用 `-DisableEventCapture`，Linux 用 `--disable-event-capture`。
+
+任意记忆写入/删除类自由命令仍留在 `planned_commands`，不会作为 active command 上线，直到确认、审计和软删除链路完成。路线图见 [docs/memory-file-optimization-plan.md](docs/memory-file-optimization-plan.md)。
 
 ## 可选家庭记忆
 
-如果这个群是家庭群或需要长期轻量记忆，可以在安装时开启：
+如果这个群需要长期轻量记忆，可以在安装时开启：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 `

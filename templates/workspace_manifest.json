@@ -33,6 +33,10 @@
     "/memfind recent",
     "/tasks",
     "/tasks list",
+    "/task",
+    "/task list",
+    "/task preview",
+    "/task run",
     "/workspace-info",
     "/画图"
   ],
@@ -51,13 +55,17 @@
     "INSTRUCTIONS.md",
     "KNOWLEDGE.md",
     "memory/",
+    "memory/lark-events/",
+    "memory/evidence/",
+    "memory/facts/",
     "local_files/",
     "workspace_manifest.json"
   ],
   "guardrails": [
     "Only access this generated workspace in group context.",
     "Use OnIt reaction as acknowledgement for handled tasks.",
-    "Planned write commands must stay out of active commands until confirmation and audit paths exist."
+    "Natural-language task writes are limited to low-risk structured local state unless calendar creation is explicitly configured.",
+    "High-risk file, script, deploy, restart, and destructive tasks must stop for confirmation or deep work."
   ],
   "resource_policy": {
     "preferred_storage": "sqlite_fts5",

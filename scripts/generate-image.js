@@ -332,9 +332,9 @@ async function main() {
   const event = {
     time: new Date().toISOString(),
     type: "image_generation",
-    chat_id: process.env.FEISHU_IMAGE_CHAT_ID || process.env.QQ_IMAGE_GROUP_ID || "",
-    message_id: process.env.FEISHU_IMAGE_MESSAGE_ID || process.env.QQ_IMAGE_MESSAGE_ID || "",
-    user_id: process.env.FEISHU_IMAGE_USER_ID || process.env.QQ_IMAGE_USER_ID || "",
+    chat_id: process.env.FEISHU_IMAGE_CHAT_ID || "",
+    message_id: process.env.FEISHU_IMAGE_MESSAGE_ID || "",
+    user_id: process.env.FEISHU_IMAGE_USER_ID || "",
     mode: result.mode,
     model: result.model,
     size: options.size,
